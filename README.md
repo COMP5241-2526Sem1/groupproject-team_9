@@ -45,8 +45,8 @@ A comprehensive web-based system that empowers Hong Kong university lecturers to
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd interactive-learning-platform
+   git clone https://github.com/COMP5241-2526Sem1/groupproject-team_9.git
+   cd groupproject-team_9
    ```
 
 2. **Install dependencies**
