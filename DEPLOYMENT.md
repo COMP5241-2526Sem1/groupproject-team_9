@@ -24,7 +24,7 @@
 3. **Set up environment variables**
    Create a `.env.local` file in the root directory:
    ```env
-   MONGODB_URI=mongodb+srv://25065865g:root_231228@comp5241.mjsdsjc.mongodb.net/?retryWrites=true&w=majority&appName=COMP5241
+   MONGODB_URI=mongodb+srv://db_user:db_user123@comp5241.mjsdsjc.mongodb.net/?retryWrites=true&w=majority&appName=COMP5241
    NEXTAUTH_SECRET=your-secret-key-here-change-in-production
    NEXTAUTH_URL=http://localhost:3000
    OPENAI_API_KEY=your-openai-api-key-here
@@ -58,7 +58,7 @@
 2. **Configure Environment Variables**
    In Vercel dashboard, add these environment variables:
    ```
-   MONGODB_URI=mongodb+srv://25065865g:root_231228@comp5241.mjsdsjc.mongodb.net/?retryWrites=true&w=majority&appName=COMP5241
+   MONGODB_URI=mongodb+srv://db_user:db_user123@comp5241.mjsdsjc.mongodb.net/?retryWrites=true&w=majority&appName=COMP5241
    NEXTAUTH_SECRET=your-production-secret-key
    NEXTAUTH_URL=https://your-app-name.vercel.app
    OPENAI_API_KEY=your-openai-api-key
