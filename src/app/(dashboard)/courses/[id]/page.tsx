@@ -22,9 +22,11 @@ import {
   Clock,
   User,
   X,
-  Save
+  Save,
+  Upload
 } from 'lucide-react'
 import Link from 'next/link'
+import { StudentImportDialog } from '@/components/student-import-dialog'
 
 interface Course {
   _id: string
@@ -357,7 +359,19 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
                   <span className="text-lg font-bold">{course.activities?.length || 0}</span>
                 </div>
                 {isInstructor && (
-                  <div className="pt-4 border-t">
+                  <div className="pt-4 border-t space-y-2">
+                    <StudentImportDialog 
+                      courseId={course._id}
+                      onImportComplete={() => {
+                        // Refresh course data after import
+                        fetchCourseDetail()
+                      }}
+                    >
+                      <Button variant="outline" className="w-full">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import Students
+                      </Button>
+                    </StudentImportDialog>
                     <Button className="w-full" asChild>
                       <Link href="/activities/create">
                         <Plus className="h-4 w-4 mr-2" />
