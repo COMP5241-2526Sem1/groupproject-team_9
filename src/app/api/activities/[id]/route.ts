@@ -32,7 +32,7 @@ export async function GET(
     }
 
     return NextResponse.json(activity)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Activity fetch error:', error)
     return NextResponse.json(
       { message: 'Internal server error' },
@@ -73,7 +73,7 @@ export async function PUT(
     }
 
     return NextResponse.json(activity)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Activity update error:', error)
     return NextResponse.json(
       { message: 'Internal server error' },
@@ -108,7 +108,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: 'Activity deleted successfully' })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Activity deletion error:', error)
     return NextResponse.json(
       { message: 'Internal server error' },

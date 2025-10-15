@@ -415,7 +415,7 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
                       </Button>
                     </StudentImportDialog>
                     <Button className="w-full" asChild>
-                      <Link href="/activities/create">
+                      <Link href={`/activities/create?courseId=${course._id}`}>
                         <Plus className="h-4 w-4 mr-2" />
                         Create Activity
                       </Link>
@@ -452,7 +452,7 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
               </div>
               {isInstructor && (
                 <Button asChild>
-                  <Link href="/activities/create">
+                  <Link href={`/activities/create?courseId=${course._id}`}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create Activity
                   </Link>
@@ -521,7 +521,7 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
                 </p>
                 {isInstructor && (
                   <Button asChild>
-                    <Link href="/activities/create">
+                    <Link href={`/activities/create?courseId=${course._id}`}>
                       <Plus className="h-4 w-4 mr-2" />
                       Create Activity
                     </Link>

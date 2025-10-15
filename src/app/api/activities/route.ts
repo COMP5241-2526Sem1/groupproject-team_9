@@ -17,9 +17,17 @@ export async function POST(request: NextRequest) {
 
     const { title, description, type, courseId, timeLimit, isAnonymous, showResults, content } = await request.json()
 
-    if (!title || !type) {
+    // Validate required fields
+    if (!title || !type || !courseId) {
       return NextResponse.json(
-        { message: 'Missing required fields' },
+        { 
+          message: 'Missing required fields',
+          details: {
+            title: !title ? 'Title is required' : null,
+            type: !type ? 'Type is required' : null,
+            courseId: !courseId ? 'Course ID is required' : null
+          }
+        },
         { status: 400 }
       )
     }
@@ -44,10 +52,41 @@ export async function POST(request: NextRequest) {
     await activity.save()
 
     return NextResponse.json(activity, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Activity creation error:', error)
+    
+    // Handle specific MongoDB validation errors
+    if (error.name === 'ValidationError' && error.errors) {
+      const validationErrors = Object.values(error.errors).map((err: any) => ({
+        field: err.path,
+        message: err.message
+      }))
+      
+      return NextResponse.json(
+        { 
+          message: 'Validation error',
+          details: validationErrors
+        },
+        { status: 400 }
+      )
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { 
+          message: 'Duplicate entry',
+          details: 'An activity with this title already exists'
+        },
+        { status: 409 }
+      )
+    }
+    
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { 
+        message: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
@@ -77,7 +116,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(activities)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Activities fetch error:', error)
     return NextResponse.json(
       { message: 'Internal server error' },
