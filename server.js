@@ -110,7 +110,8 @@ io.on('connection', (socket) => {
     if (session && session.status === 'active') {
       session.results[socket.id] = {
         response,
-        submittedAt: new Date()
+        submittedAt: new Date(),
+        studentId: response.studentId
       }
       
       activeSessions.set(activityId, session)
@@ -122,7 +123,16 @@ io.on('connection', (socket) => {
         totalResponses: Object.keys(session.results).length
       })
       
-      console.log(`Response received for activity ${activityId}`)
+      // Emit confirmation to student
+      socket.emit('response-received', {
+        participantId: socket.id,
+        response,
+        totalResponses: Object.keys(session.results).length
+      })
+      
+      console.log(`Response received for activity ${activityId} from ${socket.id}`)
+    } else {
+      socket.emit('error', { message: 'Activity is not active or session not found' })
     }
   })
 
@@ -131,7 +141,60 @@ io.on('connection', (socket) => {
     const session = activeSessions.get(activityId)
     if (session) {
       socket.emit('session-updated', session)
+    } else {
+      // Create a waiting session if none exists
+      const waitingSession = {
+        id: `session-${activityId}-waiting`,
+        activityId,
+        status: 'waiting',
+        participants: Array.from(activityRooms.get(activityId) || []),
+        results: {}
+      }
+      socket.emit('session-updated', waitingSession)
     }
+  })
+
+  // Request real-time results
+  socket.on('request-results', (activityId) => {
+    const session = activeSessions.get(activityId)
+    if (session && session.status === 'active') {
+      // Send anonymized results to student
+      const anonymizedResults = Object.keys(session.results).map(participantId => ({
+        participantId: session.results[participantId].isAnonymous ? 'Anonymous' : participantId,
+        response: session.results[participantId].response,
+        submittedAt: session.results[participantId].submittedAt
+      }))
+      
+      socket.emit('results-updated', {
+        activityId,
+        results: anonymizedResults,
+        totalResponses: Object.keys(session.results).length
+      })
+    }
+  })
+
+  // Join as student
+  socket.on('join-as-student', (data) => {
+    const { activityId, studentId } = data
+    socket.join(`activity-${activityId}`)
+    socket.join(`student-${studentId}`)
+    socket.currentActivity = activityId
+    socket.studentId = studentId
+    
+    // Update participant count
+    const room = io.sockets.adapter.rooms.get(`activity-${activityId}`)
+    const participantCount = room ? room.size : 0
+    
+    // Store in activity rooms
+    if (!activityRooms.has(activityId)) {
+      activityRooms.set(activityId, new Set())
+    }
+    activityRooms.get(activityId).add(socket.id)
+    
+    // Emit participant count to all in room
+    io.to(`activity-${activityId}`).emit('participant-count', participantCount)
+    
+    console.log(`Student ${studentId} joined activity ${activityId}`)
   })
 
   // Handle disconnection

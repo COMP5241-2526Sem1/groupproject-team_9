@@ -213,7 +213,7 @@ export default function StudentDashboard() {
               </div>
               <div className="mt-4">
                 <Button variant="outline" className="w-full" asChild>
-                  <Link href="/activities">View All Activities</Link>
+                  <Link href="/student/activities">View All Activities</Link>
                 </Button>
               </div>
             </CardContent>

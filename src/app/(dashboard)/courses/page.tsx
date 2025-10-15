@@ -209,7 +209,7 @@ export default function CoursesPage() {
                       {isTeacher && session.user.id === course.instructorId && (
                         <>
                           <Button size="sm" variant="ghost" asChild>
-                            <Link href={`/courses/${course._id}`}>
+                            <Link href={`/courses/${course._id}?edit=true`}>
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>
@@ -272,13 +272,13 @@ export default function CoursesPage() {
                     {isTeacher && session.user.id === course.instructorId && (
                       <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/courses/${course._id}`}>
+                          <Link href={`/courses/${course._id}?manage=students`}>
                             <Users className="h-4 w-4 mr-1" />
                             Students
                           </Link>
                         </Button>
                         <Button variant="outline" size="sm" asChild>
-                          <Link href="/activities/create">
+                          <Link href={`/activities/create?courseId=${course._id}`}>
                             <Plus className="h-4 w-4 mr-1" />
                             Activity
                           </Link>
