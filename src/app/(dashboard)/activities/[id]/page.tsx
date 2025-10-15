@@ -248,9 +248,11 @@ export default function ActivityDetailPage() {
                       </Link>
                     </Button>
                   )}
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/activities/${activity._id}/edit`}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Link>
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleDelete}>
                     <Trash2 className="h-4 w-4 mr-2" />

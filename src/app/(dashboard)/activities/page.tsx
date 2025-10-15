@@ -271,8 +271,10 @@ export default function ActivitiesPage() {
                   </div>
                   
                   <div className="flex space-x-1">
-                    <Button size="sm" variant="outline">
-                      <Edit className="h-3 w-3" />
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href={`/activities/${activity._id}/edit`}>
+                        <Edit className="h-3 w-3" />
+                      </Link>
                     </Button>
                     <Button size="sm" variant="outline">
                       <Trash2 className="h-3 w-3" />
