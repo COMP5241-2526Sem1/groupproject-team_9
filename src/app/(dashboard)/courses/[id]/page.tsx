@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { StudentImportDialog } from '@/components/student-import-dialog'
+import { StudentManagement } from '@/components/student-management'
 
 interface Course {
   _id: string
@@ -35,6 +36,13 @@ interface Course {
   code: string
   instructorId: string
   studentIds: string[]
+  students?: Array<{
+    _id: string
+    name: string
+    email: string
+    studentId?: string
+    institution?: string
+  }>
   activities: Activity[]
   createdAt: string
   updatedAt: string
@@ -68,6 +76,7 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
     code: ''
   })
   const [editLoading, setEditLoading] = useState(false)
+  const [showStudentManagement, setShowStudentManagement] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -150,6 +159,31 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
 
   const handleInputChange = (field: string, value: string) => {
     setEditForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleStudentAdded = (newStudent: any) => {
+    if (course) {
+      setCourse(prev => ({
+        ...prev!,
+        students: [...(prev?.students || []), newStudent],
+        studentIds: [...(prev?.studentIds || []), newStudent._id]
+      }))
+    }
+  }
+
+  const handleStudentRemoved = (studentId: string) => {
+    if (course) {
+      setCourse(prev => ({
+        ...prev!,
+        students: prev?.students?.filter(s => s._id !== studentId) || [],
+        studentIds: prev?.studentIds?.filter(id => id !== studentId) || []
+      }))
+    }
+  }
+
+  const handleStudentsImported = () => {
+    // Refresh course data after import
+    fetchCourseDetail()
   }
 
   const getActivityIcon = (type: string) => {
@@ -239,6 +273,14 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
             <div className="flex items-center space-x-4">
               {isInstructor && (
                 <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowStudentManagement(!showStudentManagement)}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    {showStudentManagement ? 'Hide Students' : 'Manage Students'}
+                  </Button>
                   <Button variant="outline" size="sm" onClick={handleEditClick}>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Course
@@ -384,6 +426,19 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
             </Card>
           </div>
         </div>
+
+        {/* Student Management Section */}
+        {isInstructor && showStudentManagement && (
+          <div className="mb-8">
+            <StudentManagement
+              courseId={course._id}
+              students={course.students || []}
+              onStudentAdded={handleStudentAdded}
+              onStudentRemoved={handleStudentRemoved}
+              onStudentsImported={handleStudentsImported}
+            />
+          </div>
+        )}
 
         {/* Activities Section */}
         <Card>
