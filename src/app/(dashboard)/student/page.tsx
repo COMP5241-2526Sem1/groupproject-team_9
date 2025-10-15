@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -24,58 +26,57 @@ interface Course {
   activities: Activity[]
 }
 
+interface DashboardData {
+  stats: {
+    totalActivities: number
+    completedActivities: number
+    averageScore: number
+    currentStreak: number
+    rank: number
+  }
+  courses: Course[]
+  recentActivities: Activity[]
+}
+
 export default function StudentDashboard() {
-  const [courses, setCourses] = useState<Course[]>([])
-  const [recentActivities, setRecentActivities] = useState<Activity[]>([])
-  const [stats, setStats] = useState({
-    totalActivities: 0,
-    completedActivities: 0,
-    averageScore: 0,
-    currentStreak: 0,
-    rank: 0
-  })
-
-  // Mock data for demonstration
-  const mockCourses = [
-    {
-      _id: '1',
-      title: 'Software Engineering',
-      code: 'COMP 5241',
-      activities: [
-        { _id: '1', title: 'Week 1 Quiz', type: 'quiz', status: 'completed', score: 95, dueDate: '2024-01-15' },
-        { _id: '2', title: 'Requirements Poll', type: 'poll', status: 'completed', score: 88, dueDate: '2024-01-16' },
-        { _id: '3', title: 'Design Patterns Quiz', type: 'quiz', status: 'pending', dueDate: '2024-01-20' }
-      ]
-    },
-    {
-      _id: '2',
-      title: 'Database Systems',
-      code: 'COMP 5242',
-      activities: [
-        { _id: '4', title: 'SQL Basics Quiz', type: 'quiz', status: 'completed', score: 92, dueDate: '2024-01-14' },
-        { _id: '5', title: 'Normalization Exercise', type: 'shortanswer', status: 'pending', dueDate: '2024-01-18' }
-      ]
-    }
-  ]
-
-  const mockRecentActivities = [
-    { _id: '1', title: 'Week 1 Quiz', type: 'quiz', status: 'completed', score: 95, dueDate: '2024-01-15' },
-    { _id: '2', title: 'Requirements Poll', type: 'poll', status: 'completed', score: 88, dueDate: '2024-01-16' },
-    { _id: '3', title: 'Design Patterns Quiz', type: 'quiz', status: 'pending', dueDate: '2024-01-20' },
-    { _id: '4', title: 'SQL Basics Quiz', type: 'quiz', status: 'completed', score: 92, dueDate: '2024-01-14' }
-  ]
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setCourses(mockCourses)
-    setRecentActivities(mockRecentActivities)
-    setStats({
-      totalActivities: 5,
-      completedActivities: 3,
-      averageScore: 92,
-      currentStreak: 7,
-      rank: 3
-    })
-  }, [])
+    if (status === 'loading') return
+    if (!session) {
+      router.push('/auth/login')
+      return
+    }
+    
+    if (session.user.role === 'student') {
+      fetchDashboardData()
+    } else {
+      router.push('/dashboard')
+    }
+  }, [session, status, router])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch('/api/student/dashboard')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data')
+      }
+      
+      const data = await response.json()
+      setDashboardData(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -100,6 +101,39 @@ export default function StudentDashboard() {
         return <Badge variant="outline">{status}</Badge>
     }
   }
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session || !session.user) {
+    return null
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 text-xl mb-4">Error loading dashboard</div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={fetchDashboardData}>Retry</Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!dashboardData) {
+    return null
+  }
+
+  const { stats, courses, recentActivities } = dashboardData
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -135,7 +169,7 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.completedActivities}/{stats.totalActivities}</div>
-              <Progress value={(stats.completedActivities / stats.totalActivities) * 100} className="mt-2" />
+              <Progress value={stats.totalActivities > 0 ? (stats.completedActivities / stats.totalActivities) * 100 : 0} className="mt-2" />
             </CardContent>
           </Card>
 
@@ -147,7 +181,7 @@ export default function StudentDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{stats.averageScore}%</div>
               <p className="text-xs text-muted-foreground">
-                +3% from last week
+                {stats.averageScore > 0 ? 'Keep up the great work!' : 'Complete activities to see your score'}
               </p>
             </CardContent>
           </Card>
@@ -173,7 +207,7 @@ export default function StudentDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">#{stats.rank}</div>
               <p className="text-xs text-muted-foreground">
-                Top 10%
+                {stats.rank <= 3 ? 'Excellent ranking!' : stats.rank <= 10 ? 'Great job!' : 'Keep improving!'}
               </p>
             </CardContent>
           </Card>
@@ -190,26 +224,33 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentActivities.map((activity) => (
-                  <div key={activity._id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-2xl">{getActivityIcon(activity.type)}</span>
-                      <div>
-                        <h4 className="font-medium">{activity.title}</h4>
-                        <p className="text-sm text-gray-600 capitalize">{activity.type}</p>
+                {recentActivities.length > 0 ? (
+                  recentActivities.map((activity) => (
+                    <div key={activity._id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{getActivityIcon(activity.type)}</span>
+                        <div>
+                          <h4 className="font-medium">{activity.title}</h4>
+                          <p className="text-sm text-gray-600 capitalize">{activity.type}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        {activity.score && (
+                          <div className="text-right">
+                            <div className="font-bold text-green-600">{activity.score}%</div>
+                            <div className="text-xs text-gray-600">Score</div>
+                          </div>
+                        )}
+                        {getStatusBadge(activity.status)}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      {activity.score && (
-                        <div className="text-right">
-                          <div className="font-bold text-green-600">{activity.score}%</div>
-                          <div className="text-xs text-gray-600">Score</div>
-                        </div>
-                      )}
-                      {getStatusBadge(activity.status)}
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No recent activities found.</p>
+                    <p className="text-sm">Complete some activities to see them here!</p>
                   </div>
-                ))}
+                )}
               </div>
               <div className="mt-4">
                 <Button variant="outline" className="w-full" asChild>
@@ -229,41 +270,48 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {courses.map((course) => (
-                  <div key={course._id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="font-medium">{course.title}</h4>
-                        <p className="text-sm text-gray-600">{course.code}</p>
+                {courses.length > 0 ? (
+                  courses.map((course) => (
+                    <div key={course._id} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-medium">{course.title}</h4>
+                          <p className="text-sm text-gray-600">{course.code}</p>
+                        </div>
+                        <Badge variant="outline">{course.activities.length} activities</Badge>
                       </div>
-                      <Badge variant="outline">{course.activities.length} activities</Badge>
-                    </div>
-                    <div className="space-y-2">
-                      {course.activities.slice(0, 2).map((activity) => (
-                        <div key={activity._id} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center space-x-2">
-                            <span>{getActivityIcon(activity.type)}</span>
-                            <span>{activity.title}</span>
+                      <div className="space-y-2">
+                        {course.activities.slice(0, 2).map((activity) => (
+                          <div key={activity._id} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center space-x-2">
+                              <span>{getActivityIcon(activity.type)}</span>
+                              <span>{activity.title}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {activity.dueDate && (
+                                <div className="flex items-center text-gray-500">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  <span>{new Date(activity.dueDate).toLocaleDateString()}</span>
+                                </div>
+                              )}
+                              {getStatusBadge(activity.status)}
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            {activity.dueDate && (
-                              <div className="flex items-center text-gray-500">
-                                <Clock className="h-3 w-3 mr-1" />
-                                <span>{new Date(activity.dueDate).toLocaleDateString()}</span>
-                              </div>
-                            )}
-                            {getStatusBadge(activity.status)}
+                        ))}
+                        {course.activities.length > 2 && (
+                          <div className="text-sm text-gray-500">
+                            +{course.activities.length - 2} more activities
                           </div>
-                        </div>
-                      ))}
-                      {course.activities.length > 2 && (
-                        <div className="text-sm text-gray-500">
-                          +{course.activities.length - 2} more activities
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No courses enrolled.</p>
+                    <p className="text-sm">Contact your instructor to get enrolled in courses!</p>
                   </div>
-                ))}
+                )}
               </div>
               <div className="mt-4">
                 <Button variant="outline" className="w-full" asChild>

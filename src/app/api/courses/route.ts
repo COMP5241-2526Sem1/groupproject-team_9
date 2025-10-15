@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import connectDB from '@/lib/mongodb'
 import Course from '@/models/Course'
+import Activity from '@/models/Activity'
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,12 +63,26 @@ export async function GET(request: NextRequest) {
     if (session.user.role === 'teacher') {
       courses = await Course.find({ instructorId: session.user.id })
         .populate('studentIds', 'name email studentId')
+        .populate('instructorId', 'name email')
     } else {
-      courses = await Course.find({ studentIds: session.user.id })
+      // For students, show all available courses
+      courses = await Course.find()
         .populate('instructorId', 'name email')
     }
 
-    return NextResponse.json(courses)
+    // Add activity count for each course
+    const coursesWithActivityCount = await Promise.all(
+      courses.map(async (course) => {
+        const activityCount = await Activity.countDocuments({ courseId: course._id })
+        return {
+          ...course.toObject(),
+          studentCount: course.studentIds ? course.studentIds.length : 0,
+          activityCount
+        }
+      })
+    )
+
+    return NextResponse.json(coursesWithActivityCount)
   } catch (error) {
     console.error('Courses fetch error:', error)
     return NextResponse.json(
