@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,7 +22,16 @@ interface Question {
   points: number
 }
 
+interface Course {
+  _id: string
+  title: string
+  code: string
+  description: string
+}
+
 export default function CreateActivityPage() {
+  const { data: session, status } = useSession()
+  const searchParams = useSearchParams()
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -32,8 +42,46 @@ export default function CreateActivityPage() {
     showResults: true
   })
   const [questions, setQuestions] = useState<Question[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingCourses, setLoadingCourses] = useState(true)
   const router = useRouter()
+
+  // Fetch courses on component mount
+  useEffect(() => {
+    if (status === 'loading') return
+    if (!session) {
+      router.push('/auth/login')
+      return
+    }
+    
+    fetchCourses()
+  }, [session, status, router])
+
+  const fetchCourses = async () => {
+    try {
+      setLoadingCourses(true)
+      const response = await fetch('/api/courses')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch courses')
+      }
+      
+      const data = await response.json()
+      setCourses(data)
+      
+      // Pre-select course if courseId is provided in URL params
+      const courseIdFromUrl = searchParams.get('courseId')
+      if (courseIdFromUrl && data.some((course: Course) => course._id === courseIdFromUrl)) {
+        setFormData(prev => ({ ...prev, courseId: courseIdFromUrl }))
+      }
+    } catch (error) {
+      toast.error('Failed to load courses')
+      console.error('Error fetching courses:', error)
+    } finally {
+      setLoadingCourses(false)
+    }
+  }
 
   const addQuestion = () => {
     const newQuestion: Question = {
@@ -79,6 +127,13 @@ export default function CreateActivityPage() {
     e.preventDefault()
     setIsLoading(true)
 
+    // Validate required fields
+    if (!formData.courseId) {
+      toast.error('Please select a course')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const activityData = {
         ...formData,
@@ -103,9 +158,25 @@ export default function CreateActivityPage() {
         router.push('/dashboard')
       } else {
         const error = await response.json()
-        toast.error(error.message || 'Failed to create activity')
+        console.error('Activity creation error:', error)
+        
+        if (error.details) {
+          // Handle validation errors
+          if (Array.isArray(error.details)) {
+            error.details.forEach((detail: any) => {
+              toast.error(`${detail.field}: ${detail.message}`)
+            })
+          } else if (typeof error.details === 'object') {
+            Object.values(error.details).forEach((message: any) => {
+              if (message) toast.error(message)
+            })
+          }
+        } else {
+          toast.error(error.message || 'Failed to create activity')
+        }
       }
     } catch (error) {
+      console.error('Activity creation error:', error)
       toast.error('An error occurred while creating the activity')
     } finally {
       setIsLoading(false)
@@ -168,6 +239,31 @@ export default function CreateActivityPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="courseId">Course</Label>
+                <Select 
+                  value={formData.courseId} 
+                  onValueChange={(value) => setFormData({...formData, courseId: value})}
+                  disabled={loadingCourses}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingCourses ? "Loading courses..." : "Select a course"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((course) => (
+                      <SelectItem key={course._id} value={course._id}>
+                        {course.code} - {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {courses.length === 0 && !loadingCourses && (
+                  <p className="text-sm text-gray-500">
+                    No courses found. Please create a course first.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
