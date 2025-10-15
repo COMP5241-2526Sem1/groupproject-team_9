@@ -271,6 +271,12 @@ export default function DashboardPage() {
                 {isTeacher ? (
                   <>
                     <Button className="w-full justify-start" asChild>
+                      <Link href="/courses">
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        View All Courses
+                      </Link>
+                    </Button>
+                    <Button className="w-full justify-start" variant="outline" asChild>
                       <Link href="/courses/create">
                         <Plus className="h-4 w-4 mr-2" />
                         Create New Course
@@ -292,6 +298,12 @@ export default function DashboardPage() {
                 ) : (
                   <>
                     <Button className="w-full justify-start" asChild>
+                      <Link href="/courses">
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        View My Courses
+                      </Link>
+                    </Button>
+                    <Button className="w-full justify-start" variant="outline" asChild>
                       <Link href="/activities">
                         <Activity className="h-4 w-4 mr-2" />
                         View Activities

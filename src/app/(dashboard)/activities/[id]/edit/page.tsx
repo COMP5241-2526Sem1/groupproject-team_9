@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,9 +29,54 @@ interface Course {
   description: string
 }
 
-export default function CreateActivityPage() {
+interface Activity {
+  _id: string
+  title: string
+  description?: string
+  type: 'poll' | 'quiz' | 'wordcloud' | 'shortanswer' | 'minigame'
+  status: 'draft' | 'active' | 'completed'
+  courseId: {
+    _id: string
+    title: string
+    code: string
+  }
+  content: {
+    questions?: Question[]
+    options?: string[]
+    instructions?: string
+    timeLimit?: number
+    allowMultiple?: boolean
+    wordCloudSettings?: {
+      maxWords: number
+      minWordLength: number
+      excludeCommon: boolean
+      colorScheme: string
+    }
+    gameSettings?: {
+      gameType: 'memory' | 'matching' | 'puzzle' | 'trivia'
+      difficulty: 'easy' | 'medium' | 'hard'
+      timeLimit?: number
+      maxPlayers?: number
+    }
+  }
+  settings: {
+    isAnonymous: boolean
+    showResults: boolean
+    allowMultipleAttempts: boolean
+    shuffleQuestions: boolean
+    timeLimit?: number
+    dueDate?: Date
+  }
+  createdAt: string
+  updatedAt: string
+  participants?: number
+}
+
+export default function EditActivityPage() {
+  const params = useParams()
+  const router = useRouter()
   const { data: session, status } = useSession()
-  const searchParams = useSearchParams()
+  const [activity, setActivity] = useState<Activity | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -39,15 +84,16 @@ export default function CreateActivityPage() {
     courseId: '',
     timeLimit: 0,
     isAnonymous: false,
-    showResults: true
+    showResults: true,
+    allowMultipleAttempts: false,
+    shuffleQuestions: false
   })
   const [questions, setQuestions] = useState<Question[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingActivity, setLoadingActivity] = useState(true)
   const [loadingCourses, setLoadingCourses] = useState(true)
-  const router = useRouter()
 
-  // Fetch courses on component mount
   useEffect(() => {
     if (status === 'loading') return
     if (!session) {
@@ -55,8 +101,49 @@ export default function CreateActivityPage() {
       return
     }
     
+    fetchActivity()
     fetchCourses()
-  }, [session, status, router])
+  }, [session, status, router, params.id])
+
+  const fetchActivity = async () => {
+    try {
+      setLoadingActivity(true)
+      const response = await fetch(`/api/activities/${params.id}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Activity not found')
+        }
+        throw new Error('Failed to fetch activity details')
+      }
+      
+      const data = await response.json()
+      setActivity(data)
+      
+      // Populate form with existing data
+      setFormData({
+        title: data.title || '',
+        description: data.description || '',
+        type: data.type || 'poll',
+        courseId: data.courseId._id || '',
+        timeLimit: data.settings?.timeLimit || 0,
+        isAnonymous: data.settings?.isAnonymous || false,
+        showResults: data.settings?.showResults || true,
+        allowMultipleAttempts: data.settings?.allowMultipleAttempts || false,
+        shuffleQuestions: data.settings?.shuffleQuestions || false
+      })
+      
+      // Set questions if they exist
+      if (data.content?.questions) {
+        setQuestions(data.content.questions)
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to load activity')
+      console.error('Error fetching activity:', err)
+    } finally {
+      setLoadingActivity(false)
+    }
+  }
 
   const fetchCourses = async () => {
     try {
@@ -69,12 +156,6 @@ export default function CreateActivityPage() {
       
       const data = await response.json()
       setCourses(data)
-      
-      // Pre-select course if courseId is provided in URL params
-      const courseIdFromUrl = searchParams.get('courseId')
-      if (courseIdFromUrl && data.some((course: Course) => course._id === courseIdFromUrl)) {
-        setFormData(prev => ({ ...prev, courseId: courseIdFromUrl }))
-      }
     } catch (error) {
       toast.error('Failed to load courses')
       console.error('Error fetching courses:', error)
@@ -148,17 +229,27 @@ export default function CreateActivityPage() {
 
     try {
       const activityData = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        courseId: formData.courseId,
         content: {
           questions: questions.map(q => ({
             ...q,
             options: q.options?.filter(opt => opt.trim() !== '')
           }))
+        },
+        settings: {
+          isAnonymous: formData.isAnonymous,
+          showResults: formData.showResults,
+          allowMultipleAttempts: formData.allowMultipleAttempts,
+          shuffleQuestions: formData.shuffleQuestions,
+          timeLimit: formData.timeLimit || undefined
         }
       }
 
-      const response = await fetch('/api/activities', {
-        method: 'POST',
+      const response = await fetch(`/api/activities/${params.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -166,11 +257,11 @@ export default function CreateActivityPage() {
       })
 
       if (response.ok) {
-        toast.success('Activity created successfully!')
-        router.push('/dashboard')
+        toast.success('Activity updated successfully!')
+        router.push(`/activities/${params.id}`)
       } else {
         const error = await response.json()
-        console.error('Activity creation error:', error)
+        console.error('Activity update error:', error)
         
         if (error.details) {
           // Handle validation errors
@@ -184,15 +275,41 @@ export default function CreateActivityPage() {
             })
           }
         } else {
-          toast.error(error.message || 'Failed to create activity')
+          toast.error(error.message || 'Failed to update activity')
         }
       }
     } catch (error) {
-      console.error('Activity creation error:', error)
-      toast.error('An error occurred while creating the activity')
+      console.error('Activity update error:', error)
+      toast.error('An error occurred while updating the activity')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (status === 'loading' || loadingActivity || loadingCourses) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session || !session.user) {
+    return null
+  }
+
+  if (!activity) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-gray-600 text-xl mb-4">Activity not found</div>
+          <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -201,13 +318,13 @@ export default function CreateActivityPage() {
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center py-6">
-            <Link href="/dashboard">
+            <Link href={`/activities/${params.id}`}>
               <Button variant="outline" size="sm" className="mr-4">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                Back to Activity
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-gray-900">Create Activity</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Edit Activity</h1>
           </div>
         </div>
       </div>
@@ -220,7 +337,7 @@ export default function CreateActivityPage() {
             <CardHeader>
               <CardTitle>Activity Information</CardTitle>
               <CardDescription>
-                Set up the basic details for your activity
+                Update the basic details for your activity
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -271,11 +388,6 @@ export default function CreateActivityPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                {courses.length === 0 && !loadingCourses && (
-                  <p className="text-sm text-gray-500">
-                    No courses found. Please create a course first.
-                  </p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -289,7 +401,7 @@ export default function CreateActivityPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
                   <Input
@@ -300,23 +412,46 @@ export default function CreateActivityPage() {
                     onChange={(e) => setFormData({...formData, timeLimit: parseInt(e.target.value) || 0})}
                   />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="isAnonymous"
-                    checked={formData.isAnonymous}
-                    onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})}
-                  />
-                  <Label htmlFor="isAnonymous">Anonymous responses</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="showResults"
-                    checked={formData.showResults}
-                    onChange={(e) => setFormData({...formData, showResults: e.target.checked})}
-                  />
-                  <Label htmlFor="showResults">Show results immediately</Label>
+                <div className="space-y-2">
+                  <Label>Settings</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="isAnonymous"
+                        checked={formData.isAnonymous}
+                        onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})}
+                      />
+                      <Label htmlFor="isAnonymous">Anonymous responses</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="showResults"
+                        checked={formData.showResults}
+                        onChange={(e) => setFormData({...formData, showResults: e.target.checked})}
+                      />
+                      <Label htmlFor="showResults">Show results immediately</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="allowMultipleAttempts"
+                        checked={formData.allowMultipleAttempts}
+                        onChange={(e) => setFormData({...formData, allowMultipleAttempts: e.target.checked})}
+                      />
+                      <Label htmlFor="allowMultipleAttempts">Allow multiple attempts</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="shuffleQuestions"
+                        checked={formData.shuffleQuestions}
+                        onChange={(e) => setFormData({...formData, shuffleQuestions: e.target.checked})}
+                      />
+                      <Label htmlFor="shuffleQuestions">Shuffle questions</Label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -330,7 +465,7 @@ export default function CreateActivityPage() {
                   <div>
                     <CardTitle>Questions</CardTitle>
                     <CardDescription>
-                      Add questions for your activity
+                      Add or edit questions for your activity
                     </CardDescription>
                   </div>
                   <Button type="button" onClick={addQuestion}>
@@ -507,10 +642,13 @@ export default function CreateActivityPage() {
           )}
 
           {/* Submit Button */}
-          <div className="flex justify-end">
+          <div className="flex justify-end space-x-4">
+            <Button type="button" variant="outline" onClick={() => router.back()}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={isLoading}>
               <Save className="h-4 w-4 mr-2" />
-              {isLoading ? 'Creating...' : 'Create Activity'}
+              {isLoading ? 'Updating...' : 'Update Activity'}
             </Button>
           </div>
         </form>
