@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import connectDB from '@/lib/mongodb'
 import Activity from '@/models/Activity'
+import Course from '@/models/Course'
 
 export async function POST(request: NextRequest) {
   try {
@@ -110,8 +111,16 @@ export async function GET(request: NextRequest) {
       activities = await Activity.find({})
         .populate('courseId', 'title code')
     } else {
-      // For students, get activities from their enrolled courses
-      activities = await Activity.find({})
+      // For students, get activities from their enrolled courses only
+      const enrolledCourses = await Course.find({ 
+        studentIds: session.user.id 
+      }).select('_id')
+      
+      const enrolledCourseIds = enrolledCourses.map(course => course._id)
+      
+      activities = await Activity.find({ 
+        courseId: { $in: enrolledCourseIds } 
+      })
         .populate('courseId', 'title code')
     }
 

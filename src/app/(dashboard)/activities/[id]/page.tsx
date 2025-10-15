@@ -16,7 +16,9 @@ import {
   BarChart3,
   Settings,
   Eye,
-  EyeOff
+  EyeOff,
+  CheckCircle,
+  Pause
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -78,6 +80,7 @@ export default function ActivityDetailPage() {
   const [activity, setActivity] = useState<Activity | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -168,6 +171,40 @@ export default function ActivityDetailPage() {
     }
   }
 
+  const handleStatusUpdate = async (newStatus: 'draft' | 'active' | 'completed') => {
+    if (!activity) return
+
+    setUpdatingStatus(true)
+    try {
+      const response = await fetch(`/api/activities/${params.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update activity status')
+      }
+
+      const updatedActivity = await response.json()
+      setActivity(updatedActivity)
+      
+      const statusMessages = {
+        draft: 'Activity moved to draft',
+        active: 'Activity activated successfully',
+        completed: 'Activity marked as completed'
+      }
+      
+      toast.success(statusMessages[newStatus])
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update activity status')
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -240,14 +277,48 @@ export default function ActivityDetailPage() {
               {getStatusBadge(activity.status)}
               {isTeacher && (
                 <div className="flex items-center space-x-2 ml-4">
-                  {activity.status === 'active' && (
-                    <Button asChild>
-                      <Link href={`/activities/${activity._id}/live`}>
-                        <Play className="h-4 w-4 mr-2" />
-                        Start Session
-                      </Link>
+                  {/* Status Management Buttons */}
+                  {activity.status === 'draft' && (
+                    <Button 
+                      onClick={() => handleStatusUpdate('active')}
+                      disabled={updatingStatus}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {updatingStatus ? 'Activating...' : 'Activate'}
                     </Button>
                   )}
+                  
+                  {activity.status === 'active' && (
+                    <>
+                      <Button asChild>
+                        <Link href={`/activities/${activity._id}/live`}>
+                          <Play className="h-4 w-4 mr-2" />
+                          Start Session
+                        </Link>
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleStatusUpdate('completed')}
+                        disabled={updatingStatus}
+                      >
+                        <Pause className="h-4 w-4 mr-2" />
+                        {updatingStatus ? 'Completing...' : 'Complete'}
+                      </Button>
+                    </>
+                  )}
+                  
+                  {activity.status === 'completed' && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleStatusUpdate('active')}
+                      disabled={updatingStatus}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {updatingStatus ? 'Reactivating...' : 'Reactivate'}
+                    </Button>
+                  )}
+                  
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/activities/${activity._id}/edit`}>
                       <Edit className="h-4 w-4 mr-2" />

@@ -66,21 +66,14 @@ export default function StudentActivitiesPage() {
         if (coursesResponse.ok) {
           const coursesData = await coursesResponse.json()
           setCourses(coursesData)
-          
-          // 获取所有活动
-          const activitiesResponse = await fetch('/api/activities')
-          if (activitiesResponse.ok) {
-            const activitiesData = await activitiesResponse.json()
-            
-            // 过滤出学生课程中的活动
-            const studentCourseIds = coursesData.map((course: Course) => course._id)
-            const studentActivities = activitiesData.filter((activity: Activity) => 
-              studentCourseIds.includes(activity.courseId)
-            )
-            
-            setActivities(studentActivities)
-            setFilteredActivities(studentActivities)
-          }
+        }
+        
+        // 获取学生课程中的活动（API已经过滤了）
+        const activitiesResponse = await fetch('/api/activities')
+        if (activitiesResponse.ok) {
+          const activitiesData = await activitiesResponse.json()
+          setActivities(activitiesData)
+          setFilteredActivities(activitiesData)
         }
       } catch (error) {
         console.error('Failed to fetch activities:', error)
@@ -162,7 +155,15 @@ export default function StudentActivitiesPage() {
 
   // 检查活动是否可参与
   const canParticipate = (activity: Activity) => {
-    return activity.status === 'active'
+    // 活动必须是活跃状态
+    if (activity.status !== 'active') return false
+    
+    // 检查是否已过期
+    if (activity.settings.dueDate && new Date(activity.settings.dueDate) < new Date()) {
+      return false
+    }
+    
+    return true
   }
 
   // 检查活动是否已过期

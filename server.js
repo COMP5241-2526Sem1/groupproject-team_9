@@ -6,8 +6,13 @@ const app = express()
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
-    origin: process.env.NEXT_PUBLIC_URL,
-    methods: ["GET", "POST"]
+    origin: [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      process.env.NEXT_PUBLIC_URL || "http://localhost:3000"
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
   }
 })
 

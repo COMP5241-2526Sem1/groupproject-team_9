@@ -84,16 +84,36 @@ export default function StudentActivityParticipationPage() {
   const [results, setResults] = useState<any>(null)
   const [realTimeResults, setRealTimeResults] = useState<any[]>([])
   const [showRealTimeResults, setShowRealTimeResults] = useState(false)
+  const [connectionTimeout, setConnectionTimeout] = useState(false)
 
   // 连接Socket并加入活动房间
   useEffect(() => {
-    if (!socket || !isConnected) return
+    if (!socket) {
+      console.log('❌ Socket not available')
+      return
+    }
 
-    // 连接Socket
-    socket.connect()
+    console.log('🔌 Socket available, connection status:', isConnected)
 
-    // 加入活动房间
-    socket.emit('join-activity', params.id)
+    // 确保Socket连接
+    if (!isConnected) {
+      console.log('🔄 Attempting to connect socket...')
+      socket.connect()
+    }
+
+    // 等待连接建立后再加入房间
+    const handleConnect = () => {
+      console.log('✅ Socket connected, joining activity:', params.id)
+      socket.emit('join-activity', params.id)
+    }
+
+    if (isConnected) {
+      console.log('✅ Socket already connected, joining activity immediately')
+      handleConnect()
+    } else {
+      console.log('⏳ Waiting for socket connection...')
+      socket.on('connect', handleConnect)
+    }
 
     // 监听活动更新
     socket.on('activity-updated', (data: Activity) => {
@@ -168,8 +188,18 @@ export default function StudentActivityParticipationPage() {
     // 获取会话状态
     socket.emit('get-session-status', params.id)
 
+    // 设置连接超时
+    const timeoutId = setTimeout(() => {
+      if (!isConnected) {
+        console.log('⏰ Connection timeout')
+        setConnectionTimeout(true)
+      }
+    }, 10000) // 10秒超时
+
     return () => {
+      clearTimeout(timeoutId)
       socket.emit('leave-activity', params.id)
+      socket.off('connect', handleConnect)
       socket.off('activity-updated')
       socket.off('session-updated')
       socket.off('session-started')
@@ -368,12 +398,53 @@ export default function StudentActivityParticipationPage() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Connection Status */}
-        {!isConnected && (
+        {!isConnected && !connectionTimeout && (
           <Card className="mb-6 border-orange-200 bg-orange-50">
             <CardContent className="pt-6">
               <div className="flex items-center space-x-2 text-orange-800">
                 <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
                 <span>Connecting to activity...</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Connection Success */}
+        {isConnected && (
+          <Card className="mb-6 border-green-200 bg-green-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2 text-green-800">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>Connected to activity successfully!</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Connection Timeout */}
+        {connectionTimeout && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="flex items-center justify-center space-x-2 text-red-800 mb-4">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <span className="font-medium">Connection Failed</span>
+                </div>
+                <p className="text-red-700 mb-4">
+                  Unable to connect to the activity server. Please check your internet connection and try again.
+                </p>
+                <Button 
+                  onClick={() => {
+                    setConnectionTimeout(false)
+                    if (socket) {
+                      socket.connect()
+                    }
+                  }}
+                  variant="outline"
+                  className="border-red-300 text-red-700 hover:bg-red-100"
+                >
+                  Retry Connection
+                </Button>
               </div>
             </CardContent>
           </Card>
