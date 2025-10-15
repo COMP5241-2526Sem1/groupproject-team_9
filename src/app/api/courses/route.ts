@@ -36,10 +36,41 @@ export async function POST(request: NextRequest) {
     await course.save()
 
     return NextResponse.json(course, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Course creation error:', error)
+    
+    // Handle specific MongoDB validation errors
+    if (error.name === 'ValidationError' && error.errors) {
+      const validationErrors = Object.values(error.errors).map((err: any) => ({
+        field: err.path,
+        message: err.message
+      }))
+      
+      return NextResponse.json(
+        { 
+          message: 'Validation error',
+          details: validationErrors
+        },
+        { status: 400 }
+      )
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { 
+          message: 'Duplicate entry',
+          details: 'A course with this code already exists'
+        },
+        { status: 409 }
+      )
+    }
+    
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { 
+        message: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
@@ -68,7 +99,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(courses)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Courses fetch error:', error)
     return NextResponse.json(
       { message: 'Internal server error' },

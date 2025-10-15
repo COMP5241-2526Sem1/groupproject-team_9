@@ -52,11 +52,11 @@ export async function POST(request: NextRequest) {
     await activity.save()
 
     return NextResponse.json(activity, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Activity creation error:', error)
     
     // Handle specific MongoDB validation errors
-    if (error.name === 'ValidationError') {
+    if (error.name === 'ValidationError' && error.errors) {
       const validationErrors = Object.values(error.errors).map((err: any) => ({
         field: err.path,
         message: err.message
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(activities)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Activities fetch error:', error)
     return NextResponse.json(
       { message: 'Internal server error' },
