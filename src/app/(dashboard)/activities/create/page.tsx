@@ -83,12 +83,12 @@ export default function CreateActivityPage() {
     }
   }
 
-  const addQuestion = () => {
+  const addQuestion = (questionType: 'multiple-choice' | 'true-false' | 'short-answer' = 'multiple-choice') => {
     const newQuestion: Question = {
       id: Date.now().toString(),
       text: '',
-      type: 'multiple-choice',
-      options: ['', ''],
+      type: questionType,
+      options: questionType === 'short-answer' ? undefined : ['', ''],
       points: 1
     }
     setQuestions([...questions, newQuestion])
@@ -122,6 +122,21 @@ export default function CreateActivityPage() {
         ? { ...q, options: [...(q.options || []), ''] }
         : q
     ))
+  }
+
+  const addPollOption = () => {
+    if (questions.length === 0) {
+      const newQuestion = {
+        id: Date.now().toString(),
+        text: '',
+        type: 'multiple-choice' as const,
+        options: ['', ''],
+        points: 1
+      }
+      setQuestions([newQuestion])
+    } else {
+      addOption(questions[0].id)
+    }
   }
 
   const updateOption = (questionId: string, optionIndex: number, value: string) => {
@@ -354,11 +369,13 @@ export default function CreateActivityPage() {
                   <div className="space-y-2">
                     <Label>Poll Question</Label>
                     <Input
+                      id="poll-question"
+                      name="poll-question"
                       placeholder="What would you like to ask?"
                       value={questions.length > 0 ? questions[0].text : ''}
                       onChange={(e) => {
                         if (questions.length === 0) {
-                          addQuestion()
+                          addQuestion('multiple-choice')
                         }
                         updateQuestion(questions[0]?.id || '', 'text', e.target.value)
                       }}
@@ -372,12 +389,7 @@ export default function CreateActivityPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          if (questions.length === 0) {
-                            addQuestion()
-                          }
-                          addOption(questions[0]?.id || '')
-                        }}
+                        onClick={addPollOption}
                       >
                         <Plus className="h-4 w-4 mr-1" />
                         Add Option
@@ -387,6 +399,8 @@ export default function CreateActivityPage() {
                     {questions.length > 0 && questions[0].options?.map((option, optionIndex) => (
                       <div key={optionIndex} className="flex items-center space-x-2">
                         <Input
+                          id={`poll-option-${optionIndex}`}
+                          name={`poll-option-${optionIndex}`}
                           placeholder={`Option ${optionIndex + 1}`}
                           value={option}
                           onChange={(e) => updateOption(questions[0].id, optionIndex, e.target.value)}
@@ -415,7 +429,7 @@ export default function CreateActivityPage() {
                       checked={questions.length > 0 ? questions[0].type === 'multiple-choice' : false}
                       onChange={(e) => {
                         if (questions.length === 0) {
-                          addQuestion()
+                          addQuestion('multiple-choice')
                         }
                         updateQuestion(questions[0]?.id || '', 'type', e.target.checked ? 'multiple-choice' : 'radio')
                       }}
@@ -438,7 +452,7 @@ export default function CreateActivityPage() {
                       Add questions for your quiz
                     </CardDescription>
                   </div>
-                  <Button type="button" onClick={addQuestion}>
+                  <Button type="button" onClick={() => addQuestion()}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Question
                   </Button>
@@ -469,6 +483,8 @@ export default function CreateActivityPage() {
                           <div className="space-y-2">
                             <Label>Question Text</Label>
                             <Input
+                              id={`question-text-${question.id}`}
+                              name={`question-text-${question.id}`}
                               placeholder="Enter your question..."
                               value={question.text}
                               onChange={(e) => updateQuestion(question.id, 'text', e.target.value)}
@@ -495,6 +511,8 @@ export default function CreateActivityPage() {
                             <div className="space-y-2">
                               <Label>Points</Label>
                               <Input
+                                id={`question-points-${question.id}`}
+                                name={`question-points-${question.id}`}
                                 type="number"
                                 value={question.points}
                                 onChange={(e) => updateQuestion(question.id, 'points', parseInt(e.target.value) || 1)}
@@ -534,6 +552,8 @@ export default function CreateActivityPage() {
                             <div className="space-y-2">
                               <Label>Correct Answer</Label>
                               <Input
+                                id={`question-answer-${question.id}`}
+                                name={`question-answer-${question.id}`}
                                 placeholder="Enter the correct answer..."
                                 value={question.correctAnswer || ''}
                                 onChange={(e) => updateQuestion(question.id, 'correctAnswer', e.target.value)}
@@ -561,6 +581,8 @@ export default function CreateActivityPage() {
                               {question.options?.map((option, optionIndex) => (
                                 <div key={optionIndex} className="flex items-center space-x-2">
                                   <Input
+                                    id={`quiz-option-${question.id}-${optionIndex}`}
+                                    name={`quiz-option-${question.id}-${optionIndex}`}
                                     placeholder={`Option ${optionIndex + 1}`}
                                     value={option}
                                     onChange={(e) => updateOption(question.id, optionIndex, e.target.value)}

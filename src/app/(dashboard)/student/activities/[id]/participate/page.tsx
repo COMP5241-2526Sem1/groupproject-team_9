@@ -286,23 +286,29 @@ export default function StudentActivityParticipationPage() {
 
   // 处理选择题选择
   const handleOptionSelect = (questionId: string, option: string, isMultiple: boolean = false) => {
+    console.log('🎯 Option selected:', { questionId, option, isMultiple, currentResponse: response })
+    
     if (isMultiple) {
       const currentOptions = (response.selectedOptions || []) as string[]
       const newOptions = currentOptions.includes(option)
         ? currentOptions.filter(opt => opt !== option)
         : [...currentOptions, option]
       
-      setResponse({
+      const newResponse = {
         ...response,
         questionId,
         selectedOptions: newOptions
-      })
+      }
+      console.log('📝 Multiple choice response:', newResponse)
+      setResponse(newResponse)
     } else {
-      setResponse({
+      const newResponse = {
         ...response,
         questionId,
         answer: option
-      })
+      }
+      console.log('📝 Single choice response:', newResponse)
+      setResponse(newResponse)
     }
   }
 
@@ -471,6 +477,23 @@ export default function StudentActivityParticipationPage() {
           </Card>
         )}
 
+        {/* Debug Panel - Remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card className="mb-6 border-yellow-200 bg-yellow-50">
+            <CardHeader>
+              <CardTitle className="text-sm">Debug Info</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xs space-y-2">
+                <div><strong>Activity Type:</strong> {activity.type}</div>
+                <div><strong>Session Status:</strong> {sessionData?.status}</div>
+                <div><strong>Response State:</strong> {JSON.stringify(response, null, 2)}</div>
+                <div><strong>Activity Content:</strong> {JSON.stringify(activity.content, null, 2)}</div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Activity Content */}
         <Card className="mb-6">
           <CardHeader>
@@ -495,6 +518,11 @@ export default function StudentActivityParticipationPage() {
                           type={activity.content.allowMultiple ? "checkbox" : "radio"}
                           name="poll-option"
                           value={option}
+                          checked={
+                            activity.content.allowMultiple 
+                              ? (response.selectedOptions || []).includes(option)
+                              : response.answer === option
+                          }
                           onChange={() => handleOptionSelect('poll', option, activity.content.allowMultiple)}
                           className="w-4 h-4 text-blue-600"
                         />
@@ -510,6 +538,11 @@ export default function StudentActivityParticipationPage() {
                             type={activity.content.questions![0].type === 'multiple-choice' ? "checkbox" : "radio"}
                             name="poll-option"
                             value={option}
+                            checked={
+                              activity.content.questions![0].type === 'multiple-choice'
+                                ? (response.selectedOptions || []).includes(option)
+                                : response.answer === option
+                            }
                             onChange={() => handleOptionSelect('poll', option, activity.content.questions![0].type === 'multiple-choice')}
                             className="w-4 h-4 text-blue-600"
                           />
@@ -604,7 +637,7 @@ export default function StudentActivityParticipationPage() {
               onClick={submitResponse}
               size="lg"
               className="px-8"
-              disabled={!response || (!response.answer && !response.text && !response.selectedOptions)}
+              disabled={!response || (!response.answer && !response.text && (!response.selectedOptions || response.selectedOptions.length === 0))}
             >
               <Send className="h-5 w-5 mr-2" />
               Submit Response
