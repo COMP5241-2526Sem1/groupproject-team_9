@@ -143,8 +143,10 @@ io.on('connection', (socket) => {
 
   // Get session status
   socket.on('get-session-status', (activityId) => {
+    console.log(`🔍 Getting session status for activity ${activityId}`)
     const session = activeSessions.get(activityId)
     if (session) {
+      console.log(`📊 Found existing session:`, session)
       socket.emit('session-updated', session)
     } else {
       // Create a waiting session if none exists
@@ -155,6 +157,7 @@ io.on('connection', (socket) => {
         participants: Array.from(activityRooms.get(activityId) || []),
         results: {}
       }
+      console.log(`⏳ Created waiting session:`, waitingSession)
       socket.emit('session-updated', waitingSession)
     }
   })

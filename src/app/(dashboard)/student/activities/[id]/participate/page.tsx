@@ -122,6 +122,7 @@ export default function StudentActivityParticipationPage() {
 
     // 监听会话状态更新
     socket.on('session-updated', (data: Session) => {
+      console.log('📊 Session updated:', data)
       setSessionData(data)
       if (data.status === 'completed') {
         setShowResults(true)
@@ -186,6 +187,7 @@ export default function StudentActivityParticipationPage() {
     })
 
     // 获取会话状态
+    console.log('🔍 Requesting session status for activity:', params.id)
     socket.emit('get-session-status', params.id)
 
     // 设置连接超时
@@ -480,20 +482,44 @@ export default function StudentActivityParticipationPage() {
           <CardContent>
             {activity.type === 'poll' && (
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Select your answer:</h3>
+                <h3 className="text-lg font-medium">
+                  {activity.content.instructions || 
+                   (activity.content.questions && activity.content.questions.length > 0 ? activity.content.questions[0].text : 'Select your answer:')}
+                </h3>
                 <div className="space-y-2">
-                  {activity.content.options?.map((option, index) => (
-                    <label key={index} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type={activity.content.allowMultiple ? "checkbox" : "radio"}
-                        name="poll-option"
-                        value={option}
-                        onChange={() => handleOptionSelect('poll', option, activity.content.allowMultiple)}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <span>{option}</span>
-                    </label>
-                  ))}
+                  {/* Handle new poll structure (content.options) */}
+                  {activity.content.options && activity.content.options.length > 0 ? (
+                    activity.content.options.map((option, index) => (
+                      <label key={index} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type={activity.content.allowMultiple ? "checkbox" : "radio"}
+                          name="poll-option"
+                          value={option}
+                          onChange={() => handleOptionSelect('poll', option, activity.content.allowMultiple)}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span>{option}</span>
+                      </label>
+                    ))
+                  ) : (
+                    /* Handle old poll structure (content.questions) */
+                    activity.content.questions && activity.content.questions.length > 0 && activity.content.questions[0].options ? (
+                      activity.content.questions[0].options.map((option, index) => (
+                        <label key={index} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                          <input
+                            type={activity.content.questions![0].type === 'multiple-choice' ? "checkbox" : "radio"}
+                            name="poll-option"
+                            value={option}
+                            onChange={() => handleOptionSelect('poll', option, activity.content.questions![0].type === 'multiple-choice')}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span>{option}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-gray-500">No poll options available</p>
+                    )
+                  )}
                 </div>
               </div>
             )}

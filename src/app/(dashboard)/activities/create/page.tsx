@@ -147,14 +147,32 @@ export default function CreateActivityPage() {
     }
 
     try {
-      const activityData = {
-        ...formData,
-        content: {
+      let content = {}
+      
+      if (formData.type === 'poll') {
+        // For poll activities, use simple options structure
+        content = {
+          options: questions.length > 0 && questions[0].options 
+            ? questions[0].options.filter(opt => opt.trim() !== '')
+            : [],
+          instructions: questions.length > 0 && questions[0].text 
+            ? questions[0].text 
+            : formData.description,
+          allowMultiple: questions.length > 0 ? questions[0].type === 'multiple-choice' : false
+        }
+      } else {
+        // For other activity types, use questions structure
+        content = {
           questions: questions.map(q => ({
             ...q,
             options: q.options?.filter(opt => opt.trim() !== '')
           }))
         }
+      }
+
+      const activityData = {
+        ...formData,
+        content
       }
 
       const response = await fetch('/api/activities', {
@@ -322,15 +340,102 @@ export default function CreateActivityPage() {
             </CardContent>
           </Card>
 
-          {/* Questions Section */}
-          {(formData.type === 'quiz' || formData.type === 'poll') && (
+          {/* Poll Options Section */}
+          {formData.type === 'poll' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Poll Options</CardTitle>
+                <CardDescription>
+                  Add options for your poll
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Poll Question</Label>
+                    <Input
+                      placeholder="What would you like to ask?"
+                      value={questions.length > 0 ? questions[0].text : ''}
+                      onChange={(e) => {
+                        if (questions.length === 0) {
+                          addQuestion()
+                        }
+                        updateQuestion(questions[0]?.id || '', 'text', e.target.value)
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Poll Options</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (questions.length === 0) {
+                            addQuestion()
+                          }
+                          addOption(questions[0]?.id || '')
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Option
+                      </Button>
+                    </div>
+                    
+                    {questions.length > 0 && questions[0].options?.map((option, optionIndex) => (
+                      <div key={optionIndex} className="flex items-center space-x-2">
+                        <Input
+                          placeholder={`Option ${optionIndex + 1}`}
+                          value={option}
+                          onChange={(e) => updateOption(questions[0].id, optionIndex, e.target.value)}
+                        />
+                        {questions[0].options && questions[0].options.length > 2 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newOptions = questions[0].options?.filter((_, idx) => idx !== optionIndex)
+                              updateQuestion(questions[0].id, 'options', newOptions)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="allowMultiplePoll"
+                      checked={questions.length > 0 ? questions[0].type === 'multiple-choice' : false}
+                      onChange={(e) => {
+                        if (questions.length === 0) {
+                          addQuestion()
+                        }
+                        updateQuestion(questions[0]?.id || '', 'type', e.target.checked ? 'multiple-choice' : 'radio')
+                      }}
+                    />
+                    <Label htmlFor="allowMultiplePoll">Allow multiple selections</Label>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Questions Section for Quiz */}
+          {formData.type === 'quiz' && (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Questions</CardTitle>
                     <CardDescription>
-                      Add questions for your activity
+                      Add questions for your quiz
                     </CardDescription>
                   </div>
                   <Button type="button" onClick={addQuestion}>
