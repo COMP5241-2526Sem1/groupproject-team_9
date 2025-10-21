@@ -10,22 +10,46 @@ import Link from 'next/link'
 
 interface DashboardData {
   stats: {
-    totalCourses: number
-    totalStudents: number
+    totalCourses?: number
+    totalStudents?: number
     totalActivities: number
     averageScore: number
+    completedActivities?: number
+    currentStreak?: number
+    rank?: number
   }
-  trends: {
+  trends?: {
     courses: number
     students: number
     activities: number
     score: number
   }
-  recentCourses: Array<{
+  recentCourses?: Array<{
     id: string
     title: string
     code: string
     studentCount: number
+  }>
+  courses?: Array<{
+    _id: string
+    title: string
+    code: string
+    activities: Array<{
+      _id: string
+      title: string
+      type: string
+      status: string
+      score?: number
+      dueDate?: string
+    }>
+  }>
+  recentActivities?: Array<{
+    _id: string
+    title: string
+    type: string
+    status: string
+    score?: number
+    dueDate?: string
   }>
 }
 
@@ -43,16 +67,21 @@ export default function DashboardPage() {
       return
     }
     
-    if (session.user.role === 'teacher') {
-      fetchDashboardData()
-    }
+    // Fetch dashboard data for both teachers and students
+    fetchDashboardData()
   }, [session, status, router])
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch('/api/dashboard')
+      
+      // Use different API endpoints based on user role
+      const apiEndpoint = session?.user.role === 'student' 
+        ? '/api/student/dashboard' 
+        : '/api/dashboard'
+      
+      const response = await fetch(apiEndpoint)
       
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard data')
@@ -129,51 +158,83 @@ export default function DashboardPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardData?.stats.totalCourses || 0}</div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                {dashboardData?.trends.courses !== undefined && dashboardData.trends.courses !== 0 && (
-                  <>
-                    {dashboardData.trends.courses > 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600 mr-1" />
+          {isTeacher ? (
+            <>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{dashboardData?.stats.totalCourses || 0}</div>
+                  <p className="text-xs text-muted-foreground flex items-center">
+                    {dashboardData?.trends?.courses !== undefined && dashboardData.trends.courses !== 0 && (
+                      <>
+                        {dashboardData.trends.courses > 0 ? (
+                          <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-600 mr-1" />
+                        )}
+                        {Math.abs(dashboardData.trends.courses)} from last month
+                      </>
                     )}
-                    {Math.abs(dashboardData.trends.courses)} from last month
-                  </>
-                )}
-                {(!dashboardData?.trends.courses || dashboardData.trends.courses === 0) && 'No change from last month'}
-              </p>
-            </CardContent>
-          </Card>
+                    {(!dashboardData?.trends?.courses || dashboardData.trends.courses === 0) && 'No change from last month'}
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Students</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardData?.stats.totalStudents || 0}</div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                {dashboardData?.trends.students !== undefined && dashboardData.trends.students !== 0 && (
-                  <>
-                    {dashboardData.trends.students > 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600 mr-1" />
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Students</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{dashboardData?.stats.totalStudents || 0}</div>
+                  <p className="text-xs text-muted-foreground flex items-center">
+                    {dashboardData?.trends?.students !== undefined && dashboardData.trends.students !== 0 && (
+                      <>
+                        {dashboardData.trends.students > 0 ? (
+                          <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-600 mr-1" />
+                        )}
+                        {Math.abs(dashboardData.trends.students)} from last month
+                      </>
                     )}
-                    {Math.abs(dashboardData.trends.students)} from last month
-                  </>
-                )}
-                {(!dashboardData?.trends.students || dashboardData.trends.students === 0) && 'No change from last month'}
-              </p>
-            </CardContent>
-          </Card>
+                    {(!dashboardData?.trends?.students || dashboardData.trends.students === 0) && 'No change from last month'}
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Completed Activities</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{dashboardData?.stats.completedActivities || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    out of {dashboardData?.stats.totalActivities || 0} total
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Current Streak</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{dashboardData?.stats.currentStreak || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    consecutive days
+                  </p>
+                </CardContent>
+              </Card>
+            </>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -183,7 +244,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">{dashboardData?.stats.totalActivities || 0}</div>
               <p className="text-xs text-muted-foreground flex items-center">
-                {dashboardData?.trends.activities !== undefined && dashboardData.trends.activities !== 0 && (
+                {dashboardData?.trends?.activities !== undefined && dashboardData.trends.activities !== 0 && (
                   <>
                     {dashboardData.trends.activities > 0 ? (
                       <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
@@ -193,30 +254,43 @@ export default function DashboardPage() {
                     {Math.abs(dashboardData.trends.activities)} from last month
                   </>
                 )}
-                {(!dashboardData?.trends.activities || dashboardData.trends.activities === 0) && 'No change from last month'}
+                {(!dashboardData?.trends?.activities || dashboardData.trends.activities === 0) && 'No change from last month'}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Score</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {isStudent ? 'My Rank' : 'Avg Score'}
+              </CardTitle>
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dashboardData?.stats.averageScore || 0}%</div>
+              <div className="text-2xl font-bold">
+                {isStudent 
+                  ? `#${dashboardData?.stats.rank || 'N/A'}`
+                  : `${dashboardData?.stats.averageScore || 0}%`
+                }
+              </div>
               <p className="text-xs text-muted-foreground flex items-center">
-                {dashboardData?.trends.score !== undefined && dashboardData.trends.score !== 0 && (
+                {isStudent ? (
+                  'among all students'
+                ) : (
                   <>
-                    {dashboardData.trends.score > 0 ? (
-                      <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600 mr-1" />
+                    {dashboardData?.trends?.score !== undefined && dashboardData.trends.score !== 0 && (
+                      <>
+                        {dashboardData.trends.score > 0 ? (
+                          <TrendingUp className="h-3 w-3 text-green-600 mr-1" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-600 mr-1" />
+                        )}
+                        {Math.abs(dashboardData.trends.score)}% from last month
+                      </>
                     )}
-                    {Math.abs(dashboardData.trends.score)}% from last month
+                    {(!dashboardData?.trends?.score || dashboardData.trends.score === 0) && 'No change from last month'}
                   </>
                 )}
-                {(!dashboardData?.trends.score || dashboardData.trends.score === 0) && 'No change from last month'}
               </p>
             </CardContent>
           </Card>
@@ -227,32 +301,59 @@ export default function DashboardPage() {
           {/* Recent Courses */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Courses</CardTitle>
+              <CardTitle>
+                {isTeacher ? 'Recent Courses' : 'My Courses'}
+              </CardTitle>
               <CardDescription>
                 {isTeacher ? 'Your teaching courses' : 'Courses you\'re enrolled in'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {dashboardData?.recentCourses && dashboardData.recentCourses.length > 0 ? (
-                  dashboardData.recentCourses.map((course) => (
-                    <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-medium">{course.title}</h4>
-                        <p className="text-sm text-gray-600">{course.code}</p>
-                        <p className="text-xs text-gray-500">{course.studentCount} students</p>
+                {isTeacher ? (
+                  dashboardData?.recentCourses && dashboardData.recentCourses.length > 0 ? (
+                    dashboardData.recentCourses.map((course) => (
+                      <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <h4 className="font-medium">{course.title}</h4>
+                          <p className="text-sm text-gray-600">{course.code}</p>
+                          <p className="text-xs text-gray-500">{course.studentCount} students</p>
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/courses/${course.id}`}>
+                            View
+                          </Link>
+                        </Button>
                       </div>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/courses/${course.id}`}>
-                          View
-                        </Link>
-                      </Button>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No courses created yet
                     </div>
-                  ))
+                  )
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    {isTeacher ? 'No courses created yet' : 'No courses enrolled'}
-                  </div>
+                  dashboardData?.courses && dashboardData.courses.length > 0 ? (
+                    dashboardData.courses.map((course) => (
+                      <div key={course._id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <h4 className="font-medium">{course.title}</h4>
+                          <p className="text-sm text-gray-600">{course.code}</p>
+                          <p className="text-xs text-gray-500">
+                            {course.activities.filter(a => a.status === 'completed').length} / {course.activities.length} activities completed
+                          </p>
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/courses/${course._id}`}>
+                            View
+                          </Link>
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No courses enrolled
+                    </div>
+                  )
                 )}
               </div>
             </CardContent>
