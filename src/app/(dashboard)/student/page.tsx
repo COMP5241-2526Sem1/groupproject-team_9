@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { BookOpen, Trophy, Target, Clock, Award, TrendingUp } from 'lucide-react'
+import { BookOpen, Trophy, Target, Clock, Award, TrendingUp, LogOut } from 'lucide-react'
 import Link from 'next/link'
 
 interface Activity {
@@ -152,6 +152,15 @@ export default function StudentDashboard() {
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/leaderboard">View Leaderboard</Link>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => signOut({ callbackUrl: '/auth/login' })}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
               </Button>
             </div>
           </div>

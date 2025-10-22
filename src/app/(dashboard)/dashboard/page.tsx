@@ -1,11 +1,11 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { BookOpen, Users, Activity, BarChart3, Plus, Settings, TrendingUp, TrendingDown } from 'lucide-react'
+import { BookOpen, Users, Activity, BarChart3, Plus, Settings, TrendingUp, TrendingDown, LogOut } from 'lucide-react'
 import Link from 'next/link'
 
 interface DashboardData {
@@ -141,6 +141,15 @@ export default function DashboardPage() {
               <Button variant="outline" size="sm">
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => signOut({ callbackUrl: '/auth/login' })}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
               </Button>
             </div>
           </div>
