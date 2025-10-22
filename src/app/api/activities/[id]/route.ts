@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import connectDB from '@/lib/mongodb'
 import Activity from '@/models/Activity'
+import Course from '@/models/Course'
 
 export async function GET(
   request: NextRequest,
@@ -21,7 +22,7 @@ export async function GET(
     await connectDB()
 
     const activity = await Activity.findById(params.id)
-      .populate('courseId', 'title code instructorId')
+      .populate('courseId', 'title code instructorId studentIds')
       .populate('courseId.instructorId', 'name email')
 
     if (!activity) {
@@ -29,6 +30,17 @@ export async function GET(
         { message: 'Activity not found' },
         { status: 404 }
       )
+    }
+
+    // 检查权限：教师可以访问所有活动，学生只能访问已注册课程的活动
+    if (session.user.role === 'student') {
+      const course = await Course.findById(activity.courseId._id)
+      if (!course || !course.studentIds.includes(session.user.id)) {
+        return NextResponse.json(
+          { message: 'Access denied. You are not enrolled in this course.' },
+          { status: 403 }
+        )
+      }
     }
 
     return NextResponse.json(activity)

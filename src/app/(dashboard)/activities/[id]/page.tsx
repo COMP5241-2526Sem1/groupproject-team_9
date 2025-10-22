@@ -353,7 +353,7 @@ export default function ActivityDetailPage() {
               </Card>
             )}
 
-            {/* Questions */}
+            {/* Questions for Quiz and other question-based activities */}
             {activity.content.questions && activity.content.questions.length > 0 && (
               <Card>
                 <CardHeader>
@@ -365,10 +365,10 @@ export default function ActivityDetailPage() {
                 <CardContent>
                   <div className="space-y-4">
                     {activity.content.questions.map((question, index) => (
-                      <div key={question.id} className="border rounded-lg p-4">
+                      <div key={question.id || index} className="border rounded-lg p-4">
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="font-medium">Question {index + 1}</h4>
-                          <Badge variant="outline">{question.points} pts</Badge>
+                          <Badge variant="outline">{question.points || 1} pts</Badge>
                         </div>
                         <p className="text-gray-700 mb-3">{question.text}</p>
                         {question.options && question.options.length > 0 && (
@@ -386,6 +386,49 @@ export default function ActivityDetailPage() {
                       </div>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Poll Options for Poll activities */}
+            {activity.type === 'poll' && activity.content.options && activity.content.options.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Poll Options ({activity.content.options.length})</CardTitle>
+                  <CardDescription>
+                    Available options for this poll
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {activity.content.options.map((option, index) => (
+                      <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg">
+                        <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium">
+                          {index + 1}
+                        </span>
+                        <span className="text-gray-700">{option}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Show message if no content is available */}
+            {!activity.content.questions?.length && 
+             !(activity.type === 'poll' && activity.content.options?.length) && 
+             !activity.content.instructions && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Activity Content</CardTitle>
+                  <CardDescription>
+                    This activity doesn't have any questions or content yet
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-500 text-center py-4">
+                    No questions or content have been added to this activity.
+                  </p>
                 </CardContent>
               </Card>
             )}

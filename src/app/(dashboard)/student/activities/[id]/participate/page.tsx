@@ -550,7 +550,14 @@ export default function StudentActivityParticipationPage() {
                         </label>
                       ))
                     ) : (
-                      <p className="text-gray-500">No poll options available</p>
+                      <div className="text-center py-8">
+                        <p className="text-gray-500 mb-4">No poll options available</p>
+                        <div className="text-sm text-gray-400">
+                          <p>Debug info:</p>
+                          <p>Content options: {JSON.stringify(activity.content.options)}</p>
+                          <p>Content questions: {JSON.stringify(activity.content.questions)}</p>
+                        </div>
+                      </div>
                     )
                   )}
                 </div>
