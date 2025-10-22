@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Filter, Play, Edit, Trash2, LogOut } from 'lucide-react'
+import { Plus, Search, Filter, Play, Edit, Trash2, CheckCircle, Pause, LogOut } from 'lucide-react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 
 interface Activity {
   _id: string
@@ -30,6 +31,7 @@ export default function ActivitiesPage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [isLoading, setIsLoading] = useState(true)
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
 
   // Mock data for demonstration
   const mockActivities: Activity[] = [
@@ -133,6 +135,40 @@ export default function ActivitiesPage() {
       case 'shortanswer': return 'text-orange-600'
       case 'minigame': return 'text-pink-600'
       default: return 'text-gray-600'
+    }
+  }
+
+  const handleStatusUpdate = async (activityId: string, newStatus: 'draft' | 'active' | 'completed') => {
+    setUpdatingStatus(activityId)
+    try {
+      const response = await fetch(`/api/activities/${activityId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update activity status')
+      }
+
+      const updatedActivity = await response.json()
+      setActivities(activities.map(activity => 
+        activity._id === activityId ? { ...activity, status: newStatus } : activity
+      ))
+      
+      const statusMessages = {
+        draft: 'Activity moved to draft',
+        active: 'Activity activated successfully',
+        completed: 'Activity marked as completed'
+      }
+      
+      toast.success(statusMessages[newStatus])
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update activity status')
+    } finally {
+      setUpdatingStatus(null)
     }
   }
 
@@ -283,6 +319,40 @@ export default function ActivitiesPage() {
                   </div>
                   
                   <div className="flex space-x-1">
+                    {/* Status Management Buttons */}
+                    {activity.status === 'draft' && (
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleStatusUpdate(activity._id, 'active')}
+                        disabled={updatingStatus === activity._id}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-3 w-3" />
+                      </Button>
+                    )}
+                    
+                    {activity.status === 'active' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleStatusUpdate(activity._id, 'completed')}
+                        disabled={updatingStatus === activity._id}
+                      >
+                        <Pause className="h-3 w-3" />
+                      </Button>
+                    )}
+                    
+                    {activity.status === 'completed' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleStatusUpdate(activity._id, 'active')}
+                        disabled={updatingStatus === activity._id}
+                      >
+                        <CheckCircle className="h-3 w-3" />
+                      </Button>
+                    )}
+                    
                     <Button size="sm" variant="outline" asChild>
                       <Link href={`/activities/${activity._id}/edit`}>
                         <Edit className="h-3 w-3" />

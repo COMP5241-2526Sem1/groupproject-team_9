@@ -65,8 +65,10 @@ export async function GET(request: NextRequest) {
         .populate('studentIds', 'name email studentId')
         .populate('instructorId', 'name email')
     } else {
-      // For students, show all available courses
-      courses = await Course.find()
+      // For students, show only enrolled courses
+      courses = await Course.find({ 
+        studentIds: session.user.id 
+      })
         .populate('instructorId', 'name email')
     }
 

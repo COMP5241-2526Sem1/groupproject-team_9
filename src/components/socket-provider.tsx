@@ -18,21 +18,45 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    const socketInstance = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
-      autoConnect: false
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001'
+    console.log('🔌 Initializing Socket.io connection to:', socketUrl)
+    
+    const socketInstance = io(socketUrl, {
+      autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      timeout: 20000,
+      withCredentials: true,
+      transports: ['polling', 'websocket']
     })
 
+    // Set socket immediately
+    setSocket(socketInstance)
+
     socketInstance.on('connect', () => {
+      console.log('✅ Socket connected:', socketInstance.id)
       setIsConnected(true)
     })
 
-    socketInstance.on('disconnect', () => {
+    socketInstance.on('disconnect', (reason) => {
+      console.log('❌ Socket disconnected:', reason)
       setIsConnected(false)
     })
 
-    setSocket(socketInstance)
+    socketInstance.on('connect_error', (error) => {
+      console.error('❌ Socket connection error:', error)
+      setIsConnected(false)
+    })
+
+    // Check initial connection state
+    if (socketInstance.connected) {
+      console.log('✅ Socket already connected on initialization')
+      setIsConnected(true)
+    }
 
     return () => {
+      console.log('🔌 Cleaning up Socket.io connection')
       socketInstance.close()
     }
   }, [])

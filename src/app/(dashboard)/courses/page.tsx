@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { BookOpen, Users, Calendar, Plus, ArrowLeft, LogOut } from 'lucide-react'
+import { BookOpen, Users, Calendar, Plus, ArrowLeft, Eye, Edit, Trash2, LogOut } from 'lucide-react'
 import Link from 'next/link'
 
 interface Course {
@@ -108,6 +108,28 @@ export default function CoursesPage() {
     return course.studentIds.some(id => id === session?.user?.id)
   }
 
+  const handleDeleteCourse = async (courseId: string) => {
+    if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/courses/${courseId}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to delete course')
+      }
+      
+      // Refresh courses list
+      await fetchCourses()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    }
+  }
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -193,9 +215,28 @@ export default function CoursesPage() {
                         {course.code}
                       </CardDescription>
                     </div>
-                    <Badge variant="outline">
-                      {course.activityCount} activities
-                    </Badge>
+                    <div className="flex items-center space-x-2 ml-2">
+                      <Badge variant="outline">
+                        {course.activityCount} activities
+                      </Badge>
+                      {isTeacher && session.user.id === course.instructorId._id && (
+                        <div className="flex space-x-1">
+                          <Button size="sm" variant="ghost" asChild>
+                            <Link href={`/courses/${course._id}?edit=true`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => handleDeleteCourse(course._id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -224,6 +265,24 @@ export default function CoursesPage() {
                         View Details
                       </Link>
                     </Button>
+                    
+                    {isTeacher && session.user.id === course.instructorId._id && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/courses/${course._id}?manage=students`}>
+                            <Users className="h-4 w-4 mr-1" />
+                            Students
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/activities/create?courseId=${course._id}`}>
+                            <Plus className="h-4 w-4 mr-1" />
+                            Activity
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
+                    
                     {isStudent && (
                       <>
                         {isEnrolled(course) ? (

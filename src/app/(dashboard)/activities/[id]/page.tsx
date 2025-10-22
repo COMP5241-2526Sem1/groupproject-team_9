@@ -16,7 +16,9 @@ import {
   BarChart3,
   Settings,
   Eye,
-  EyeOff
+  EyeOff,
+  CheckCircle,
+  Pause
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -78,6 +80,7 @@ export default function ActivityDetailPage() {
   const [activity, setActivity] = useState<Activity | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -168,6 +171,40 @@ export default function ActivityDetailPage() {
     }
   }
 
+  const handleStatusUpdate = async (newStatus: 'draft' | 'active' | 'completed') => {
+    if (!activity) return
+
+    setUpdatingStatus(true)
+    try {
+      const response = await fetch(`/api/activities/${params.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update activity status')
+      }
+
+      const updatedActivity = await response.json()
+      setActivity(updatedActivity)
+      
+      const statusMessages = {
+        draft: 'Activity moved to draft',
+        active: 'Activity activated successfully',
+        completed: 'Activity marked as completed'
+      }
+      
+      toast.success(statusMessages[newStatus])
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update activity status')
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -240,14 +277,48 @@ export default function ActivityDetailPage() {
               {getStatusBadge(activity.status)}
               {isTeacher && (
                 <div className="flex items-center space-x-2 ml-4">
-                  {activity.status === 'active' && (
-                    <Button asChild>
-                      <Link href={`/activities/${activity._id}/live`}>
-                        <Play className="h-4 w-4 mr-2" />
-                        Start Session
-                      </Link>
+                  {/* Status Management Buttons */}
+                  {activity.status === 'draft' && (
+                    <Button 
+                      onClick={() => handleStatusUpdate('active')}
+                      disabled={updatingStatus}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {updatingStatus ? 'Activating...' : 'Activate'}
                     </Button>
                   )}
+                  
+                  {activity.status === 'active' && (
+                    <>
+                      <Button asChild>
+                        <Link href={`/activities/${activity._id}/live`}>
+                          <Play className="h-4 w-4 mr-2" />
+                          Start Session
+                        </Link>
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleStatusUpdate('completed')}
+                        disabled={updatingStatus}
+                      >
+                        <Pause className="h-4 w-4 mr-2" />
+                        {updatingStatus ? 'Completing...' : 'Complete'}
+                      </Button>
+                    </>
+                  )}
+                  
+                  {activity.status === 'completed' && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleStatusUpdate('active')}
+                      disabled={updatingStatus}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {updatingStatus ? 'Reactivating...' : 'Reactivate'}
+                    </Button>
+                  )}
+                  
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/activities/${activity._id}/edit`}>
                       <Edit className="h-4 w-4 mr-2" />
@@ -282,7 +353,7 @@ export default function ActivityDetailPage() {
               </Card>
             )}
 
-            {/* Questions */}
+            {/* Questions for Quiz and other question-based activities */}
             {activity.content.questions && activity.content.questions.length > 0 && (
               <Card>
                 <CardHeader>
@@ -294,10 +365,10 @@ export default function ActivityDetailPage() {
                 <CardContent>
                   <div className="space-y-4">
                     {activity.content.questions.map((question, index) => (
-                      <div key={question.id} className="border rounded-lg p-4">
+                      <div key={question.id || index} className="border rounded-lg p-4">
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="font-medium">Question {index + 1}</h4>
-                          <Badge variant="outline">{question.points} pts</Badge>
+                          <Badge variant="outline">{question.points || 1} pts</Badge>
                         </div>
                         <p className="text-gray-700 mb-3">{question.text}</p>
                         {question.options && question.options.length > 0 && (
@@ -315,6 +386,49 @@ export default function ActivityDetailPage() {
                       </div>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Poll Options for Poll activities */}
+            {activity.type === 'poll' && activity.content.options && activity.content.options.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Poll Options ({activity.content.options.length})</CardTitle>
+                  <CardDescription>
+                    Available options for this poll
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {activity.content.options.map((option, index) => (
+                      <div key={index} className="flex items-center space-x-2 p-3 border rounded-lg">
+                        <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium">
+                          {index + 1}
+                        </span>
+                        <span className="text-gray-700">{option}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Show message if no content is available */}
+            {!activity.content.questions?.length && 
+             !(activity.type === 'poll' && activity.content.options?.length) && 
+             !activity.content.instructions && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Activity Content</CardTitle>
+                  <CardDescription>
+                    This activity doesn't have any questions or content yet
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-500 text-center py-4">
+                    No questions or content have been added to this activity.
+                  </p>
                 </CardContent>
               </Card>
             )}

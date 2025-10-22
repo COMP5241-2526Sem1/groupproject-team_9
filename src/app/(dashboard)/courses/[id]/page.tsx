@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -66,6 +66,7 @@ interface CourseDetailProps {
 export default function CourseDetailPage({ params }: CourseDetailProps) {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -87,6 +88,20 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
     
     fetchCourseDetail()
   }, [session, status, router, params.id])
+
+  // Handle URL parameters
+  useEffect(() => {
+    const editParam = searchParams.get('edit')
+    const manageParam = searchParams.get('manage')
+    
+    if (editParam === 'true') {
+      setIsEditing(true)
+    }
+    
+    if (manageParam === 'students') {
+      setShowStudentManagement(true)
+    }
+  }, [searchParams])
 
   const fetchCourseDetail = async () => {
     try {

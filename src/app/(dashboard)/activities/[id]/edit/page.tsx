@@ -86,7 +86,8 @@ export default function EditActivityPage() {
     isAnonymous: false,
     showResults: true,
     allowMultipleAttempts: false,
-    shuffleQuestions: false
+    shuffleQuestions: false,
+    status: 'draft' as 'draft' | 'active' | 'completed'
   })
   const [questions, setQuestions] = useState<Question[]>([])
   const [courses, setCourses] = useState<Course[]>([])
@@ -130,7 +131,8 @@ export default function EditActivityPage() {
         isAnonymous: data.settings?.isAnonymous || false,
         showResults: data.settings?.showResults || true,
         allowMultipleAttempts: data.settings?.allowMultipleAttempts || false,
-        shuffleQuestions: data.settings?.shuffleQuestions || false
+        shuffleQuestions: data.settings?.shuffleQuestions || false,
+        status: data.status || 'draft'
       })
       
       // Set questions if they exist
@@ -233,6 +235,7 @@ export default function EditActivityPage() {
         description: formData.description,
         type: formData.type,
         courseId: formData.courseId,
+        status: formData.status,
         content: {
           questions: questions.map(q => ({
             ...q,
@@ -370,24 +373,43 @@ export default function EditActivityPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="courseId">Course</Label>
-                <Select 
-                  value={formData.courseId} 
-                  onValueChange={(value) => setFormData({...formData, courseId: value})}
-                  disabled={loadingCourses}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={loadingCourses ? "Loading courses..." : "Select a course"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses.map((course) => (
-                      <SelectItem key={course._id} value={course._id}>
-                        {course.code} - {course.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="courseId">Course</Label>
+                  <Select 
+                    value={formData.courseId} 
+                    onValueChange={(value) => setFormData({...formData, courseId: value})}
+                    disabled={loadingCourses}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingCourses ? "Loading courses..." : "Select a course"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map((course) => (
+                        <SelectItem key={course._id} value={course._id}>
+                          {course.code} - {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select 
+                    value={formData.status} 
+                    onValueChange={(value) => setFormData({...formData, status: value as 'draft' | 'active' | 'completed'})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
