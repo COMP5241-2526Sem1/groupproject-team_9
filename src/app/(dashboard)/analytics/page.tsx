@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession, signOut } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
-import { TrendingUp, Users, Activity, Award, Download, Loader2 } from 'lucide-react'
+import { TrendingUp, Users, Activity, Award, Download, Loader2, LogOut } from 'lucide-react'
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
@@ -153,6 +154,15 @@ export default function AnalyticsPage() {
               <Button variant="outline" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Export
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => signOut({ callbackUrl: '/auth/login' })}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
               </Button>
             </div>
           </div>

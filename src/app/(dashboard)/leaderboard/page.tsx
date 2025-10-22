@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession, signOut } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Trophy, Medal, Award, TrendingUp, Users, Star } from 'lucide-react'
+import { Trophy, Medal, Award, TrendingUp, Users, Star, LogOut } from 'lucide-react'
 
 interface LeaderboardEntry {
   rank: number
@@ -88,6 +89,15 @@ export default function LeaderboardPage() {
                   <SelectItem value="all">All Time</SelectItem>
                 </SelectContent>
               </Select>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => signOut({ callbackUrl: '/auth/login' })}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>

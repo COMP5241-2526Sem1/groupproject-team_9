@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession, signOut } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Filter, Play, Edit, Trash2, CheckCircle, Pause } from 'lucide-react'
+import { Plus, Search, Filter, Play, Edit, Trash2, CheckCircle, Pause, LogOut } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
@@ -192,12 +193,23 @@ export default function ActivitiesPage() {
               <h1 className="text-2xl font-bold text-gray-900">Activities</h1>
               <p className="text-gray-600">Manage and participate in learning activities</p>
             </div>
-            <Button asChild>
-              <Link href="/activities/create">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Activity
-              </Link>
-            </Button>
+            <div className="flex items-center space-x-4">
+              <Button asChild>
+                <Link href="/activities/create">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Activity
+                </Link>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => signOut({ callbackUrl: '/auth/login' })}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </div>
