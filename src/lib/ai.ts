@@ -152,3 +152,91 @@ Extract the most important and frequent words/phrases. Return as JSON:
     throw new Error('Failed to generate word cloud data')
   }
 }
+
+export async function generateQuizFromPDF(pdfFile: File, topic: string, numQuestions: number = 5) {
+  try {
+    // Convert file to base64
+    const arrayBuffer = await pdfFile.arrayBuffer()
+    const base64 = Buffer.from(arrayBuffer).toString('base64')
+    const mimeType = pdfFile.type
+
+    const prompt = `Based on the provided PDF document, generate ${numQuestions} multiple-choice quiz questions about "${topic}".
+
+Please create questions that:
+1. Test understanding of key concepts from the document
+2. Have 4 options each (A, B, C, D)
+3. Include one correct answer and three plausible distractors
+4. Cover different difficulty levels
+5. Are clear and unambiguous
+
+Format the response as JSON with the following structure:
+{
+  "title": "Quiz Title based on the document content",
+  "description": "Brief description of what this quiz covers",
+  "questions": [
+    {
+      "text": "Question text here",
+      "type": "multiple-choice",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswer": "Option A",
+      "points": 1,
+      "explanation": "Brief explanation of why this is the correct answer"
+    }
+  ]
+}`
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        'X-Title': 'Quiz Generator'
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert educational content creator. Generate high-quality quiz questions based on document content that test student understanding effectively."
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: prompt
+              },
+              {
+                type: "file",
+                file: {
+                  filename: pdfFile.name,
+                  file_data: `data:${mimeType};base64,${base64}`
+                }
+              }
+            ]
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+        plugins: ["pdf-text"] // Use PDF text extraction plugin
+      })
+    })
+
+    if (!response.ok) {
+      console.error('OpenRouter API error:', response)
+      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    const content = data.choices[0]?.message?.content
+    if (!content) {
+      throw new Error('No response from AI')
+    }
+
+    return JSON.parse(content)
+  } catch (error) {
+    console.error('PDF quiz generation error:', error)
+    throw new Error('Failed to generate quiz from PDF')
+  }
+}
