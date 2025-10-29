@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { PDFUpload } from '@/components/pdf-upload'
 
 interface Question {
   id: string
@@ -114,6 +115,28 @@ export default function CreateActivityPage() {
 
   const removeQuestion = (id: string) => {
     setQuestions(questions.filter(q => q.id !== id))
+  }
+
+  const handleQuizGenerated = (quizData: any) => {
+    // Update form data with generated quiz title and description
+    setFormData(prev => ({
+      ...prev,
+      title: quizData.title || prev.title,
+      description: quizData.description || prev.description
+    }))
+
+    // Convert generated questions to our Question format
+    const generatedQuestions: Question[] = quizData.questions.map((q: any, index: number) => ({
+      id: `generated-${Date.now()}-${index}`,
+      text: q.text,
+      type: 'multiple-choice' as const,
+      options: q.options || [],
+      correctAnswer: q.correctAnswer,
+      points: q.points || 1
+    }))
+
+    // Add generated questions to existing questions
+    setQuestions(prev => [...prev, ...generatedQuestions])
   }
 
   const addOption = (questionId: string) => {
@@ -437,6 +460,21 @@ export default function CreateActivityPage() {
                     <Label htmlFor="allowMultiplePoll">Allow multiple selections</Label>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* PDF Upload Section for Quiz */}
+          {formData.type === 'quiz' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Generate Quiz from PDF</CardTitle>
+                <CardDescription>
+                  Upload a PDF document to automatically generate multiple-choice questions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PDFUpload onQuizGenerated={handleQuizGenerated} />
               </CardContent>
             </Card>
           )}
