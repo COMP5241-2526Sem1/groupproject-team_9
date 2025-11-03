@@ -17,7 +17,7 @@ import { PDFUpload } from '@/components/pdf-upload'
 interface Question {
   id: string
   text: string
-  type: 'multiple-choice' | 'true-false' | 'short-answer'
+  type: 'multiple-choice' | 'true-false'
   options?: string[]
   correctAnswer?: string
   points: number
@@ -84,12 +84,12 @@ export default function CreateActivityPage() {
     }
   }
 
-  const addQuestion = (questionType: 'multiple-choice' | 'true-false' | 'short-answer' = 'multiple-choice') => {
+  const addQuestion = (questionType: 'multiple-choice' | 'true-false' = 'multiple-choice') => {
     const newQuestion: Question = {
       id: Date.now().toString(),
       text: '',
       type: questionType,
-      options: questionType === 'short-answer' ? undefined : ['', ''],
+      options: ['', ''],
       points: 1
     }
     setQuestions([...questions, newQuestion])
@@ -301,9 +301,6 @@ export default function CreateActivityPage() {
                     <SelectContent>
                       <SelectItem value="poll">Poll</SelectItem>
                       <SelectItem value="quiz">Quiz</SelectItem>
-                      <SelectItem value="wordcloud">Word Cloud</SelectItem>
-                      <SelectItem value="shortanswer">Short Answer</SelectItem>
-                      <SelectItem value="minigame">Mini Game</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -542,7 +539,6 @@ export default function CreateActivityPage() {
                                 <SelectContent>
                                   <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
                                   <SelectItem value="true-false">True/False</SelectItem>
-                                  <SelectItem value="short-answer">Short Answer</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -586,21 +582,6 @@ export default function CreateActivityPage() {
                             </div>
                           )}
 
-                          {question.type === 'short-answer' && (
-                            <div className="space-y-2">
-                              <Label>Correct Answer</Label>
-                              <Input
-                                id={`question-answer-${question.id}`}
-                                name={`question-answer-${question.id}`}
-                                placeholder="Enter the correct answer..."
-                                value={question.correctAnswer || ''}
-                                onChange={(e) => updateQuestion(question.id, 'correctAnswer', e.target.value)}
-                              />
-                              <p className="text-sm text-gray-500">
-                                Students' answers will be compared to this text (case-insensitive)
-                              </p>
-                            </div>
-                          )}
 
                           {question.type === 'multiple-choice' && (
                             <div className="space-y-2">

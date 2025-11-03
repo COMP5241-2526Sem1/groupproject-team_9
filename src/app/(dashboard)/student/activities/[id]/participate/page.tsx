@@ -21,7 +21,8 @@ import {
   Send,
   BarChart3,
   MessageSquare,
-  Target
+  Target,
+  AlertCircle
 } from 'lucide-react'
 
 interface Activity {
@@ -32,8 +33,9 @@ interface Activity {
     questions?: Array<{
       id: string
       text: string
-      type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay'
+      type: 'multiple-choice' | 'true-false'
       options?: string[]
+      correctAnswer?: string
       points: number
     }>
     options?: string[]
@@ -65,6 +67,8 @@ interface ResponseData {
   answer?: string | string[]
   text?: string
   selectedOptions?: string[]
+  // For quizzes: store all question answers as { [questionId]: answer }
+  [key: string]: any
 }
 
 export default function StudentActivityParticipationPage() {
@@ -85,6 +89,8 @@ export default function StudentActivityParticipationPage() {
   const [realTimeResults, setRealTimeResults] = useState<any[]>([])
   const [showRealTimeResults, setShowRealTimeResults] = useState(false)
   const [connectionTimeout, setConnectionTimeout] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [previousResponse, setPreviousResponse] = useState<any>(null)
 
   // 连接Socket并加入活动房间
   useEffect(() => {
@@ -212,6 +218,37 @@ export default function StudentActivityParticipationPage() {
     }
   }, [socket, isConnected, params.id])
 
+  // 加载上次的答案到表单
+  const loadPreviousAnswers = (responseData: any, activityData: Activity) => {
+    if (!responseData) return
+
+    if (activityData.type === 'quiz' && activityData.content.questions) {
+      // Quiz: responseData is an object with questionId as keys
+      const quizAnswers: any = {}
+      activityData.content.questions.forEach((question) => {
+        if (responseData[question.id]) {
+          quizAnswers[question.id] = responseData[question.id]
+        }
+      })
+      setResponse(quizAnswers)
+    } else if (activityData.type === 'poll') {
+      // Poll: can have answer or selectedOptions
+      if (responseData.selectedOptions) {
+        setResponse({
+          answer: activityData.content.allowMultiple ? undefined : responseData.answer,
+          selectedOptions: responseData.selectedOptions
+        })
+      } else if (responseData.answer) {
+        setResponse({ answer: responseData.answer })
+      }
+    } else if (activityData.type === 'shortanswer' || activityData.type === 'wordcloud') {
+      // Short answer / Word cloud: has text field
+      if (responseData.text) {
+        setResponse({ text: responseData.text })
+      }
+    }
+  }
+
   // 获取活动数据
   useEffect(() => {
     const fetchActivity = async () => {
@@ -220,6 +257,22 @@ export default function StudentActivityParticipationPage() {
         if (response.ok) {
           const data = await response.json()
           setActivity(data)
+          
+          // 如果允许多次参与，加载上次的答案
+          if (data.settings.allowMultipleAttempts && session?.user?.id) {
+            try {
+              const prevResponse = await fetch(`/api/activities/${params.id}/my-response`)
+              if (prevResponse.ok) {
+                const prevData = await prevResponse.json()
+                if (prevData.response) {
+                  setPreviousResponse(prevData.response)
+                  loadPreviousAnswers(prevData.response.responseData, data)
+                }
+              }
+            } catch (error) {
+              console.error('Failed to load previous response:', error)
+            }
+          }
         } else {
           toast.error('Failed to load activity')
           router.push('/student')
@@ -233,7 +286,7 @@ export default function StudentActivityParticipationPage() {
     }
 
     fetchActivity()
-  }, [params.id, router])
+  }, [params.id, router, session?.user?.id])
 
   // 倒计时功能
   useEffect(() => {
@@ -269,56 +322,230 @@ export default function StudentActivityParticipationPage() {
   }, [sessionData, activity])
 
   // 提交响应
-  const submitResponse = () => {
-    if (!socket || !activity || isSubmitted) return
+  const submitResponse = async () => {
+    if (!activity || isSubmitted) return
 
-    const responseData = {
-      activityId: params.id,
-      response: {
-        ...response,
-        submittedAt: new Date(),
-        studentId: session?.user?.id
+    // 先保存到数据库
+    try {
+      // 格式化响应数据
+      let responseData: any = {}
+      let calculatedScore: number | undefined = undefined
+
+      if (activity.type === 'quiz') {
+        // Quiz: response is an object with questionId as keys
+        responseData = { ...response }
+        
+        // 计算分数
+        const scoreResult = calculateQuizScore()
+        calculatedScore = scoreResult.totalPoints > 0 
+          ? Math.round((scoreResult.score / scoreResult.totalPoints) * 100)
+          : 0
+        
+        toast.success(`提交成功！得分: ${scoreResult.score}/${scoreResult.totalPoints} (${calculatedScore}%)`)
+      } else if (activity.type === 'poll') {
+        // Poll: can have answer or selectedOptions
+        if (response.selectedOptions) {
+          responseData.selectedOptions = response.selectedOptions
+        } else {
+          responseData.answer = response.answer
+        }
+      } else if (activity.type === 'shortanswer' || activity.type === 'wordcloud') {
+        // Short answer / Word cloud: has text field
+        responseData.text = response.text || ''
       }
-    }
 
-    socket.emit('submit-response', responseData)
+      // 保存到数据库
+      const apiResponse = await fetch(`/api/activities/${params.id}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          responseData,
+          score: calculatedScore
+        })
+      })
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json()
+        toast.error(errorData.error || '提交失败')
+        return
+      }
+
+      // 如果socket可用，也通过socket发送（用于实时显示）
+      if (socket) {
+        const socketData = {
+          activityId: params.id,
+          response: {
+            ...responseData,
+            submittedAt: new Date(),
+            studentId: session?.user?.id
+          }
+        }
+        socket.emit('submit-response', socketData)
+      }
+
+      setIsSubmitted(true)
+      if (activity.type !== 'quiz') {
+        toast.success('答案已提交')
+      }
+    } catch (error) {
+      console.error('Error submitting response:', error)
+      toast.error('提交失败')
+    }
   }
 
   // 处理选择题选择
   const handleOptionSelect = (questionId: string, option: string, isMultiple: boolean = false) => {
     console.log('🎯 Option selected:', { questionId, option, isMultiple, currentResponse: response })
     
-    if (isMultiple) {
-      const currentOptions = (response.selectedOptions || []) as string[]
-      const newOptions = currentOptions.includes(option)
-        ? currentOptions.filter(opt => opt !== option)
-        : [...currentOptions, option]
-      
-      const newResponse = {
+    if (activity?.type === 'quiz') {
+      // Quiz: store answer by questionId
+      setResponse({
         ...response,
-        questionId,
-        selectedOptions: newOptions
+        [questionId]: option
+      })
+    } else if (activity?.type === 'poll') {
+      // Poll: can be multiple choice
+      if (isMultiple) {
+        const currentOptions = (response.selectedOptions || []) as string[]
+        const newOptions = currentOptions.includes(option)
+          ? currentOptions.filter(opt => opt !== option)
+          : [...currentOptions, option]
+        
+        setResponse({
+          ...response,
+          selectedOptions: newOptions
+        })
+      } else {
+        setResponse({
+          ...response,
+          answer: option
+        })
       }
-      console.log('📝 Multiple choice response:', newResponse)
-      setResponse(newResponse)
-    } else {
-      const newResponse = {
-        ...response,
-        questionId,
-        answer: option
-      }
-      console.log('📝 Single choice response:', newResponse)
-      setResponse(newResponse)
     }
   }
 
   // 处理文本输入
   const handleTextInput = (questionId: string, text: string) => {
-    setResponse({
-      ...response,
-      questionId,
-      text
+    if (activity?.type === 'quiz') {
+      // Quiz: store text answer by questionId
+      setResponse({
+        ...response,
+        [questionId]: text
+      })
+    } else {
+      // Short answer / Word cloud: store in text field
+      setResponse({
+        ...response,
+        text
+      })
+    }
+  }
+
+  // 计算 quiz 分数
+  const calculateQuizScore = (): { score: number; totalPoints: number } => {
+    if (!activity || activity.type !== 'quiz' || !activity.content.questions) {
+      return { score: 0, totalPoints: 0 }
+    }
+
+    let totalPoints = 0
+    let earnedPoints = 0
+
+    activity.content.questions.forEach((question) => {
+      totalPoints += question.points || 1
+      
+      const studentAnswer = response[question.id]
+      const correctAnswer = question.correctAnswer
+
+      if (!studentAnswer || !correctAnswer) {
+        return // 没有答案或没有正确答案，不计分
+      }
+
+      // 比较答案（不区分大小写）
+      // correctAnswer 在接口中定义为 string，所以这里只处理字符串类型
+      if (typeof correctAnswer === 'string' && typeof studentAnswer === 'string') {
+        // 单选题或 True/False
+        if (studentAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
+          earnedPoints += question.points || 1
+        }
+      }
     })
+
+    return { score: earnedPoints, totalPoints }
+  }
+
+  // 检查按钮是否应该被禁用
+  const isButtonDisabled = () => {
+    if (!activity || !response) return true
+
+    if (activity.type === 'quiz') {
+      // Quiz: 检查是否有任何问题的答案
+      const hasAnswer = Object.keys(response).some(key => {
+        const answer = response[key]
+        return answer && answer.trim() !== ''
+      })
+      return !hasAnswer
+    } else if (activity.type === 'poll') {
+      // Poll: 检查是否有answer或selectedOptions
+      return !response.answer && (!response.selectedOptions || response.selectedOptions.length === 0)
+    } else if (activity.type === 'shortanswer' || activity.type === 'wordcloud') {
+      // Short answer / Word cloud: 检查是否有text
+      return !response.text || response.text.trim() === ''
+    }
+
+    return true
+  }
+
+  // 保存答案到数据库（不提交）
+  const saveResponse = async () => {
+    if (!activity || !session?.user?.id) return
+
+    try {
+      setIsSaving(true)
+
+      // 格式化响应数据
+      let responseData: any = {}
+
+      if (activity.type === 'quiz') {
+        // Quiz: response is an object with questionId as keys
+        responseData = { ...response }
+      } else if (activity.type === 'poll') {
+        // Poll: can have answer or selectedOptions
+        if (response.selectedOptions) {
+          responseData.selectedOptions = response.selectedOptions
+        } else {
+          responseData.answer = response.answer
+        }
+      } else if (activity.type === 'shortanswer' || activity.type === 'wordcloud') {
+        // Short answer / Word cloud: has text field
+        responseData.text = response.text || ''
+      }
+
+      const apiResponse = await fetch(`/api/activities/${params.id}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          responseData,
+          score: undefined,
+          feedback: undefined
+        })
+      })
+
+      if (apiResponse.ok) {
+        toast.success('答案已保存')
+      } else {
+        const errorData = await apiResponse.json()
+        toast.error(errorData.error || '保存失败')
+      }
+    } catch (error) {
+      console.error('Error saving response:', error)
+      toast.error('保存失败')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // 格式化时间
@@ -371,6 +598,79 @@ export default function StudentActivityParticipationPage() {
             Back to Dashboard
           </Button>
         </div>
+      </div>
+    )
+  }
+
+  // 检查活动是否已完成或处于草稿状态
+  if (activity.status === 'completed') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5 text-blue-600" />
+              <span>Activity Completed</span>
+            </CardTitle>
+            <CardDescription>
+              This activity has been completed and is no longer available for participation.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-center">
+              <p className="text-gray-600 mb-4">
+                You can view the results if you participated in this activity.
+              </p>
+              <div className="flex space-x-4 justify-center">
+                <Button 
+                  onClick={() => router.push(`/student/activities/${params.id}/results`)}
+                  variant="default"
+                >
+                  View Results
+                </Button>
+                <Button 
+                  onClick={() => router.push('/student/activities')}
+                  variant="outline"
+                >
+                  Back to Activities
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // 检查活动是否处于草稿状态
+  if (activity.status === 'draft') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-yellow-600" />
+              <span>Activity Not Available</span>
+            </CardTitle>
+            <CardDescription>
+              This activity is still in draft mode and is not available for participation yet.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-center">
+              <p className="text-gray-600 mb-4">
+                Please wait for the instructor to activate this activity.
+              </p>
+              <Button 
+                onClick={() => router.push('/student/activities')}
+                variant="outline"
+                className="w-full"
+              >
+                Back to Activities
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -477,23 +777,6 @@ export default function StudentActivityParticipationPage() {
           </Card>
         )}
 
-        {/* Debug Panel - Remove in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <Card className="mb-6 border-yellow-200 bg-yellow-50">
-            <CardHeader>
-              <CardTitle className="text-sm">Debug Info</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xs space-y-2">
-                <div><strong>Activity Type:</strong> {activity.type}</div>
-                <div><strong>Session Status:</strong> {sessionData?.status}</div>
-                <div><strong>Response State:</strong> {JSON.stringify(response, null, 2)}</div>
-                <div><strong>Activity Content:</strong> {JSON.stringify(activity.content, null, 2)}</div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Activity Content */}
         <Card className="mb-6">
           <CardHeader>
@@ -578,29 +861,13 @@ export default function StudentActivityParticipationPage() {
                             type={question.type === 'multiple-choice' ? "radio" : "checkbox"}
                             name={`question-${question.id}`}
                             value={option}
+                            checked={response[question.id] === option}
                             onChange={() => handleOptionSelect(question.id, option, question.type === 'multiple-choice')}
                             className="w-4 h-4 text-blue-600"
                           />
                           <span>{option}</span>
                         </label>
                       ))}
-                      {question.type === 'short-answer' && (
-                        <Input
-                          placeholder="Enter your answer..."
-                          value={response.questionId === question.id ? response.text || '' : ''}
-                          onChange={(e) => handleTextInput(question.id, e.target.value)}
-                          className="mt-2"
-                        />
-                      )}
-                      {question.type === 'essay' && (
-                        <Textarea
-                          placeholder="Enter your detailed answer..."
-                          value={response.questionId === question.id ? response.text || '' : ''}
-                          onChange={(e) => handleTextInput(question.id, e.target.value)}
-                          className="mt-2"
-                          rows={4}
-                        />
-                      )}
                     </div>
                   </div>
                 ))}
@@ -637,17 +904,38 @@ export default function StudentActivityParticipationPage() {
           </CardContent>
         </Card>
 
-        {/* Submit Button */}
-        {sessionData?.status === 'active' && !isSubmitted && (
-          <div className="flex justify-center">
+        {/* Previous Answer Notice */}
+        {previousResponse && activity?.settings.allowMultipleAttempts && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2 text-blue-800">
+                <CheckCircle className="h-5 w-5" />
+                <span className="font-medium">已加载您上次的答案，可以修改后重新保存</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Save and Submit Buttons - Show in all states (except submitted) */}
+        {activity && !isSubmitted && (
+          <div className="flex justify-center space-x-4">
+            <Button 
+              onClick={saveResponse}
+              variant="outline"
+              size="lg"
+              className="px-8"
+              disabled={isSaving || isButtonDisabled()}
+            >
+              {isSaving ? '保存中...' : '保存答案'}
+            </Button>
             <Button 
               onClick={submitResponse}
               size="lg"
               className="px-8"
-              disabled={!response || (!response.answer && !response.text && (!response.selectedOptions || response.selectedOptions.length === 0))}
+              disabled={isButtonDisabled()}
             >
               <Send className="h-5 w-5 mr-2" />
-              Submit Response
+              提交答案
             </Button>
           </div>
         )}

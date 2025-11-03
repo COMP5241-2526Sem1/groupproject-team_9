@@ -16,7 +16,7 @@ import toast from 'react-hot-toast'
 interface Question {
   id: string
   text: string
-  type: 'multiple-choice' | 'true-false' | 'short-answer'
+  type: 'multiple-choice' | 'true-false'
   options?: string[]
   correctAnswer?: string
   points: number
@@ -122,10 +122,12 @@ export default function EditActivityPage() {
       setActivity(data)
       
       // Populate form with existing data
+      // Only allow poll and quiz types
+      const activityType = data.type === 'poll' || data.type === 'quiz' ? data.type : 'poll'
       setFormData({
         title: data.title || '',
         description: data.description || '',
-        type: data.type || 'poll',
+        type: activityType,
         courseId: data.courseId._id || '',
         timeLimit: data.settings?.timeLimit || 0,
         isAnonymous: data.settings?.isAnonymous || false,
@@ -365,9 +367,6 @@ export default function EditActivityPage() {
                     <SelectContent>
                       <SelectItem value="poll">Poll</SelectItem>
                       <SelectItem value="quiz">Quiz</SelectItem>
-                      <SelectItem value="wordcloud">Word Cloud</SelectItem>
-                      <SelectItem value="shortanswer">Short Answer</SelectItem>
-                      <SelectItem value="minigame">Mini Game</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -540,7 +539,6 @@ export default function EditActivityPage() {
                                 <SelectContent>
                                   <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
                                   <SelectItem value="true-false">True/False</SelectItem>
-                                  <SelectItem value="short-answer">Short Answer</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -582,19 +580,6 @@ export default function EditActivityPage() {
                             </div>
                           )}
 
-                          {question.type === 'short-answer' && (
-                            <div className="space-y-2">
-                              <Label>Correct Answer</Label>
-                              <Input
-                                placeholder="Enter the correct answer..."
-                                value={question.correctAnswer || ''}
-                                onChange={(e) => updateQuestion(question.id, 'correctAnswer', e.target.value)}
-                              />
-                              <p className="text-sm text-gray-500">
-                                Students' answers will be compared to this text (case-insensitive)
-                              </p>
-                            </div>
-                          )}
 
                           {question.type === 'multiple-choice' && (
                             <div className="space-y-2">
