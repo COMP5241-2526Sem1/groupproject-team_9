@@ -21,7 +21,8 @@ import {
   Send,
   BarChart3,
   MessageSquare,
-  Target
+  Target,
+  AlertCircle
 } from 'lucide-react'
 
 interface Activity {
@@ -552,6 +553,79 @@ export default function StudentActivityParticipationPage() {
             Back to Dashboard
           </Button>
         </div>
+      </div>
+    )
+  }
+
+  // 检查活动是否已完成或处于草稿状态
+  if (activity.status === 'completed') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5 text-blue-600" />
+              <span>Activity Completed</span>
+            </CardTitle>
+            <CardDescription>
+              This activity has been completed and is no longer available for participation.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-center">
+              <p className="text-gray-600 mb-4">
+                You can view the results if you participated in this activity.
+              </p>
+              <div className="flex space-x-4 justify-center">
+                <Button 
+                  onClick={() => router.push(`/student/activities/${params.id}/results`)}
+                  variant="default"
+                >
+                  View Results
+                </Button>
+                <Button 
+                  onClick={() => router.push('/student/activities')}
+                  variant="outline"
+                >
+                  Back to Activities
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // 检查活动是否处于草稿状态
+  if (activity.status === 'draft') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-yellow-600" />
+              <span>Activity Not Available</span>
+            </CardTitle>
+            <CardDescription>
+              This activity is still in draft mode and is not available for participation yet.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-center">
+              <p className="text-gray-600 mb-4">
+                Please wait for the instructor to activate this activity.
+              </p>
+              <Button 
+                onClick={() => router.push('/student/activities')}
+                variant="outline"
+                className="w-full"
+              >
+                Back to Activities
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
