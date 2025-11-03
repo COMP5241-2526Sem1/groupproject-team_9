@@ -122,10 +122,12 @@ export default function EditActivityPage() {
       setActivity(data)
       
       // Populate form with existing data
+      // Only allow poll and quiz types
+      const activityType = data.type === 'poll' || data.type === 'quiz' ? data.type : 'poll'
       setFormData({
         title: data.title || '',
         description: data.description || '',
-        type: data.type || 'poll',
+        type: activityType,
         courseId: data.courseId._id || '',
         timeLimit: data.settings?.timeLimit || 0,
         isAnonymous: data.settings?.isAnonymous || false,
@@ -365,9 +367,6 @@ export default function EditActivityPage() {
                     <SelectContent>
                       <SelectItem value="poll">Poll</SelectItem>
                       <SelectItem value="quiz">Quiz</SelectItem>
-                      <SelectItem value="wordcloud">Word Cloud</SelectItem>
-                      <SelectItem value="shortanswer">Short Answer</SelectItem>
-                      <SelectItem value="minigame">Mini Game</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

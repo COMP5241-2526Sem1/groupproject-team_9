@@ -301,9 +301,6 @@ export default function CreateActivityPage() {
                     <SelectContent>
                       <SelectItem value="poll">Poll</SelectItem>
                       <SelectItem value="quiz">Quiz</SelectItem>
-                      <SelectItem value="wordcloud">Word Cloud</SelectItem>
-                      <SelectItem value="shortanswer">Short Answer</SelectItem>
-                      <SelectItem value="minigame">Mini Game</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
