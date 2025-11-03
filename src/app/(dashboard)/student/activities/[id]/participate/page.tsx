@@ -33,8 +33,9 @@ interface Activity {
     questions?: Array<{
       id: string
       text: string
-      type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay'
+      type: 'multiple-choice' | 'true-false'
       options?: string[]
+      correctAnswer?: string
       points: number
     }>
     options?: string[]
@@ -328,10 +329,19 @@ export default function StudentActivityParticipationPage() {
     try {
       // 格式化响应数据
       let responseData: any = {}
+      let calculatedScore: number | undefined = undefined
 
       if (activity.type === 'quiz') {
         // Quiz: response is an object with questionId as keys
         responseData = { ...response }
+        
+        // 计算分数
+        const scoreResult = calculateQuizScore()
+        calculatedScore = scoreResult.totalPoints > 0 
+          ? Math.round((scoreResult.score / scoreResult.totalPoints) * 100)
+          : 0
+        
+        toast.success(`提交成功！得分: ${scoreResult.score}/${scoreResult.totalPoints} (${calculatedScore}%)`)
       } else if (activity.type === 'poll') {
         // Poll: can have answer or selectedOptions
         if (response.selectedOptions) {
@@ -351,7 +361,8 @@ export default function StudentActivityParticipationPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          responseData
+          responseData,
+          score: calculatedScore
         })
       })
 
@@ -375,7 +386,9 @@ export default function StudentActivityParticipationPage() {
       }
 
       setIsSubmitted(true)
-      toast.success('答案已提交')
+      if (activity.type !== 'quiz') {
+        toast.success('答案已提交')
+      }
     } catch (error) {
       console.error('Error submitting response:', error)
       toast.error('提交失败')
@@ -428,6 +441,38 @@ export default function StudentActivityParticipationPage() {
         text
       })
     }
+  }
+
+  // 计算 quiz 分数
+  const calculateQuizScore = (): { score: number; totalPoints: number } => {
+    if (!activity || activity.type !== 'quiz' || !activity.content.questions) {
+      return { score: 0, totalPoints: 0 }
+    }
+
+    let totalPoints = 0
+    let earnedPoints = 0
+
+    activity.content.questions.forEach((question) => {
+      totalPoints += question.points || 1
+      
+      const studentAnswer = response[question.id]
+      const correctAnswer = question.correctAnswer
+
+      if (!studentAnswer || !correctAnswer) {
+        return // 没有答案或没有正确答案，不计分
+      }
+
+      // 比较答案（不区分大小写）
+      // correctAnswer 在接口中定义为 string，所以这里只处理字符串类型
+      if (typeof correctAnswer === 'string' && typeof studentAnswer === 'string') {
+        // 单选题或 True/False
+        if (studentAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase()) {
+          earnedPoints += question.points || 1
+        }
+      }
+    })
+
+    return { score: earnedPoints, totalPoints }
   }
 
   // 检查按钮是否应该被禁用
@@ -823,23 +868,6 @@ export default function StudentActivityParticipationPage() {
                           <span>{option}</span>
                         </label>
                       ))}
-                      {question.type === 'short-answer' && (
-                        <Input
-                          placeholder="Enter your answer..."
-                          value={response[question.id] || ''}
-                          onChange={(e) => handleTextInput(question.id, e.target.value)}
-                          className="mt-2"
-                        />
-                      )}
-                      {question.type === 'essay' && (
-                        <Textarea
-                          placeholder="Enter your detailed answer..."
-                          value={response[question.id] || ''}
-                          onChange={(e) => handleTextInput(question.id, e.target.value)}
-                          className="mt-2"
-                          rows={4}
-                        />
-                      )}
                     </div>
                   </div>
                 ))}
