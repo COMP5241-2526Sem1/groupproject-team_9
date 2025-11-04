@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
-import { TrendingUp, Users, Activity, Award, Download, Loader2, LogOut } from 'lucide-react'
+import { TrendingUp, Users, Activity, Award, Download, Loader2, LogOut, Home } from 'lucide-react'
+import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
@@ -42,6 +44,7 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const { data: session } = useSession()
   const [timeRange, setTimeRange] = useState('7d')
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -136,9 +139,17 @@ export default function AnalyticsPage() {
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-              <p className="text-gray-600">Track your teaching performance and student engagement</p>
+            <div className="flex items-center">
+              <Button variant="ghost" size="sm" asChild className="mr-2">
+                <Link href={session?.user.role === 'student' ? '/student' : '/dashboard'}>
+                  <Home className="h-4 w-4 mr-2" />
+                  Home
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+                <p className="text-gray-600">Track your teaching performance and student engagement</p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <Select value={timeRange} onValueChange={handleTimeRangeChange}>

@@ -23,7 +23,8 @@ import {
   User,
   X,
   Save,
-  Upload
+  Upload,
+  Home
 } from 'lucide-react'
 import Link from 'next/link'
 import { StudentImportDialog } from '@/components/student-import-dialog'
@@ -277,8 +278,14 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                ← Back
+              <Button variant="ghost" size="sm" asChild className="mr-2">
+                <Link href={isTeacher ? '/dashboard' : '/student'}>
+                  <Home className="h-4 w-4 mr-2" />
+                  Home
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/dashboard">← Back</Link>
               </Button>
               <div className="ml-4">
                 <h1 className="text-2xl font-bold text-gray-900">{course.title}</h1>
@@ -511,8 +518,10 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
                         </Button>
                         {isInstructor && (
                           <>
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-3 w-3" />
+                            <Button size="sm" variant="outline" asChild>
+                              <Link href={`/activities/${activity._id}/edit?from=course&courseId=${course._id}`}>
+                                <Edit className="h-3 w-3" />
+                              </Link>
                             </Button>
                             <Button size="sm" variant="outline">
                               <Trash2 className="h-3 w-3" />

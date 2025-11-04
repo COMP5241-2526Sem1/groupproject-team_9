@@ -18,7 +18,8 @@ import {
   Eye,
   EyeOff,
   CheckCircle,
-  Pause
+  Pause,
+  Home
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -255,9 +256,17 @@ export default function ActivityDetailPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+              <Button variant="ghost" size="sm" asChild className="mr-2">
+                <Link href={session.user.role === 'student' ? '/student' : '/dashboard'}>
+                  <Home className="h-4 w-4 mr-2" />
+                  Home
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href={`/courses/${activity.courseId._id}`}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Course
+                </Link>
               </Button>
               <div className="ml-4">
                 <div className="flex items-center space-x-3">
@@ -320,7 +329,7 @@ export default function ActivityDetailPage() {
                   )}
                   
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/activities/${activity._id}/edit`}>
+                    <Link href={`/activities/${activity._id}/edit?from=activity`}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Link>

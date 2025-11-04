@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Trophy, Medal, Award, TrendingUp, Users, Star, LogOut } from 'lucide-react'
+import { Trophy, Medal, Award, TrendingUp, Users, Star, LogOut, Home } from 'lucide-react'
+import Link from 'next/link'
 
 interface LeaderboardEntry {
   rank: number
@@ -19,6 +20,7 @@ interface LeaderboardEntry {
 }
 
 export default function LeaderboardPage() {
+  const { data: session } = useSession()
   const [timeRange, setTimeRange] = useState('all')
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [currentUserRank, setCurrentUserRank] = useState(0)
@@ -74,9 +76,17 @@ export default function LeaderboardPage() {
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Leaderboard</h1>
-              <p className="text-gray-600">See how you rank among your classmates</p>
+            <div className="flex items-center">
+              <Button variant="ghost" size="sm" asChild className="mr-2">
+                <Link href={session?.user.role === 'teacher' ? '/dashboard' : '/student'}>
+                  <Home className="h-4 w-4 mr-2" />
+                  Home
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Leaderboard</h1>
+                <p className="text-gray-600">See how you rank among your classmates</p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <Select value={timeRange} onValueChange={setTimeRange}>

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { BookOpen, Users, Calendar, Plus, ArrowLeft, Eye, Edit, Trash2, LogOut } from 'lucide-react'
+import { BookOpen, Users, Calendar, Plus, ArrowLeft, Eye, Edit, Trash2, LogOut, Home } from 'lucide-react'
 import Link from 'next/link'
 
 interface Course {
@@ -167,6 +167,12 @@ export default function CoursesPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
             <div className="flex items-center">
+              <Button variant="ghost" size="sm" asChild className="mr-2">
+                <Link href={isStudent ? '/student' : '/dashboard'}>
+                  <Home className="h-4 w-4 mr-2" />
+                  Home
+                </Link>
+              </Button>
               <Button variant="ghost" size="sm" asChild className="mr-4">
                 <Link href={isStudent ? '/student' : '/dashboard'}>
                   <ArrowLeft className="h-4 w-4 mr-2" />
