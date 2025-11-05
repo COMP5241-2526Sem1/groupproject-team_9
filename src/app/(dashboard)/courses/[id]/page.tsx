@@ -26,6 +26,7 @@ import {
   Upload
 } from 'lucide-react'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import { StudentImportDialog } from '@/components/student-import-dialog'
 import { StudentManagement } from '@/components/student-management'
 
@@ -199,6 +200,30 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
   const handleStudentsImported = () => {
     // Refresh course data after import
     fetchCourseDetail()
+  }
+
+  const handleDeleteActivity = async (activityId: string, activityTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${activityTitle}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/activities/${activityId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to delete activity' }))
+        throw new Error(errorData.message || 'Failed to delete activity')
+      }
+
+      toast.success('Activity deleted successfully')
+      // Refresh course data to update the activities list
+      fetchCourseDetail()
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete activity'
+      toast.error(errorMessage)
+    }
   }
 
   const getActivityIcon = (type: string) => {
@@ -511,10 +536,21 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
                         </Button>
                         {isInstructor && (
                           <>
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-3 w-3" />
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/activities/${activity._id}/edit`}>
+                                <Edit className="h-3 w-3" />
+                              </Link>
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteActivity(activity._id, activity.title)
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </>
