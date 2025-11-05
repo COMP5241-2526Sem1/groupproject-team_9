@@ -542,14 +542,9 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
                               </Link>
                             </Button>
                             <Button 
-                              type="button"
                               size="sm" 
                               variant="outline"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                handleDeleteActivity(activity._id, activity.title)
-                              }}
+                              onClick={() => handleDeleteActivity(activity._id, activity.title)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                               <Trash2 className="h-3 w-3" />
