@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Trash2, Home } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
@@ -75,6 +75,7 @@ interface Activity {
 export default function EditActivityPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { data: session, status } = useSession()
   const [activity, setActivity] = useState<Activity | null>(null)
   const [formData, setFormData] = useState({
@@ -323,12 +324,28 @@ export default function EditActivityPage() {
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center py-6">
-            <Link href={`/activities/${params.id}`}>
-              <Button variant="outline" size="sm" className="mr-4">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Activity
-              </Button>
-            </Link>
+            <Button variant="ghost" size="sm" asChild className="mr-2">
+              <Link href={session.user.role === 'student' ? '/student' : '/dashboard'}>
+                <Home className="h-4 w-4 mr-2" />
+                Home
+              </Link>
+            </Button>
+            {(() => {
+              const from = searchParams.get('from')
+              const courseId = searchParams.get('courseId')
+              const href = from === 'course' && courseId
+                ? `/courses/${courseId}`
+                : `/activities/${params.id}`
+              const label = from === 'course' && courseId ? 'Back to Course' : 'Back to Activity'
+              return (
+                <Link href={href}>
+                  <Button variant="outline" size="sm" className="mr-4">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    {label}
+                  </Button>
+                </Link>
+              )
+            })()}
             <h1 className="text-2xl font-bold text-gray-900">Edit Activity</h1>
           </div>
         </div>

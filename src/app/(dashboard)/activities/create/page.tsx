@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Trash2, Home } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { PDFUpload } from '@/components/pdf-upload'
@@ -257,6 +257,12 @@ export default function CreateActivityPage() {
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center py-6">
+            <Button variant="ghost" size="sm" asChild className="mr-2">
+              <Link href={session?.user.role === 'student' ? '/student' : '/dashboard'}>
+                <Home className="h-4 w-4 mr-2" />
+                Home
+              </Link>
+            </Button>
             <Link href="/dashboard">
               <Button variant="outline" size="sm" className="mr-4">
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -394,10 +400,19 @@ export default function CreateActivityPage() {
                       placeholder="What would you like to ask?"
                       value={questions.length > 0 ? questions[0].text : ''}
                       onChange={(e) => {
+                        const newText = e.target.value
                         if (questions.length === 0) {
-                          addQuestion('multiple-choice')
+                          const newQuestion = {
+                            id: Date.now().toString(),
+                            text: newText,
+                            type: 'multiple-choice' as const,
+                            options: ['', ''],
+                            points: 1
+                          }
+                          setQuestions([newQuestion])
+                        } else {
+                          updateQuestion(questions[0].id, 'text', newText)
                         }
-                        updateQuestion(questions[0]?.id || '', 'text', e.target.value)
                       }}
                     />
                   </div>
@@ -448,10 +463,19 @@ export default function CreateActivityPage() {
                       id="allowMultiplePoll"
                       checked={questions.length > 0 ? questions[0].type === 'multiple-choice' : false}
                       onChange={(e) => {
+                        const nextType = e.target.checked ? 'multiple-choice' : 'true-false'
                         if (questions.length === 0) {
-                          addQuestion('multiple-choice')
+                          const newQuestion = {
+                            id: Date.now().toString(),
+                            text: '',
+                            type: nextType as 'multiple-choice' | 'true-false',
+                            options: nextType === 'true-false' ? ['True', 'False'] : ['', ''],
+                            points: 1
+                          }
+                          setQuestions([newQuestion])
+                        } else {
+                          updateQuestion(questions[0].id, 'type', nextType)
                         }
-                        updateQuestion(questions[0]?.id || '', 'type', e.target.checked ? 'multiple-choice' : 'radio')
                       }}
                     />
                     <Label htmlFor="allowMultiplePoll">Allow multiple selections</Label>

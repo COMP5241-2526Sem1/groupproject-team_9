@@ -138,9 +138,11 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-600">Welcome, {session.user.name}</span>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/settings">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </Link>
               </Button>
               <Button 
                 variant="outline" 
