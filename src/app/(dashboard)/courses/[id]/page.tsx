@@ -536,17 +536,16 @@ export default function CourseDetailPage({ params }: CourseDetailProps) {
                         </Button>
                         {isInstructor && (
                           <>
-                            <Button size="sm" variant="outline" asChild>
+                            <Button variant="outline" size="sm" asChild>
                               <Link href={`/activities/${activity._id}/edit`}>
                                 <Edit className="h-3 w-3" />
                               </Link>
                             </Button>
                             <Button 
-                              type="button"
+                              variant="outline" 
                               size="sm" 
-                              variant="outline"
+                              type="button"
                               onClick={(e) => {
-                                e.preventDefault()
                                 e.stopPropagation()
                                 handleDeleteActivity(activity._id, activity.title)
                               }}
