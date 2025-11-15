@@ -41,11 +41,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    // Validate file size (max 3MB)
+    const maxSize = 3 * 1024 * 1024 // 3MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { message: 'File size must be less than 10MB' },
+        { message: '文件过大，请重新上传（文件大小不超过3MB）' },
         { status: 400 }
       )
     }

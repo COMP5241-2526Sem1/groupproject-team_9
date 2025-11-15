@@ -28,10 +28,10 @@ export function PDFUpload({ onQuizGenerated, className = '' }: PDFUploadProps) {
       return 'Please upload PDF files only'
     }
 
-    // Check file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024 // 10MB
+    // Check file size (max 3MB)
+    const maxSize = 3 * 1024 * 1024 // 3MB
     if (file.size > maxSize) {
-      return 'File size must be less than 10MB'
+      return '文件过大，请重新上传（文件大小不超过3MB）'
     }
 
     return null
@@ -215,7 +215,7 @@ export function PDFUpload({ onQuizGenerated, className = '' }: PDFUploadProps) {
                 Drag and drop your PDF file here, or click to browse
               </p>
               <p className="text-xs text-gray-400 mb-4">
-                Supports PDF files (max 10MB)
+                Supports PDF files (max 3MB)
               </p>
               <Button onClick={handleClick} variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
