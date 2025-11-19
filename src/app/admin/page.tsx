@@ -104,16 +104,16 @@ async function getAdminOverview(): Promise<AdminOverview> {
       teachers,
       students
     },
-    recentUsers: recentUsersRaw.map((user) => ({
-      id: user._id.toString(),
+    recentUsers: recentUsersRaw.map((user: any) => ({
+      id: String(user._id),
       name: user.name,
       email: user.email,
       role: user.role,
       institution: user.institution,
       createdAt: new Date(user.createdAt).toISOString()
     })),
-    recentActivities: recentActivitiesRaw.map((activity) => ({
-      id: activity._id.toString(),
+    recentActivities: recentActivitiesRaw.map((activity: any) => ({
+      id: String(activity._id),
       title: activity.title,
       type: activity.type,
       status: activity.status,
