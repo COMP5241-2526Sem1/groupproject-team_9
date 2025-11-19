@@ -8,6 +8,7 @@ import Activity from '@/models/Activity'
 import ActivityResponse from '@/models/ActivityResponse'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { AdminSignOutButton } from '@/components/admin-signout-button'
 import {
   Activity as ActivityIcon,
   BookOpen,
@@ -178,6 +179,7 @@ export default async function AdminPage() {
             <Badge variant="outline" className="uppercase tracking-wide">
               Admin
             </Badge>
+            <AdminSignOutButton />
           </div>
         </div>
 
