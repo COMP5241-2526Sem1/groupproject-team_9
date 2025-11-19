@@ -88,7 +88,7 @@ export default function StudentActivityParticipationPage() {
   const [results, setResults] = useState<any>(null)
   const [realTimeResults, setRealTimeResults] = useState<any[]>([])
   const [showRealTimeResults, setShowRealTimeResults] = useState(false)
-  const [connectionTimeout, setConnectionTimeout] = useState(false)
+  // connectionTimeout UI removed: keep logic silent for students
   const [isSaving, setIsSaving] = useState(false)
   const [previousResponse, setPreviousResponse] = useState<any>(null)
 
@@ -189,23 +189,16 @@ export default function StudentActivityParticipationPage() {
 
     // 监听错误
     socket.on('error', (error: any) => {
-      toast.error(error.message || 'An error occurred')
+      // Log socket errors but do not show UI toast to students
+      console.error('Socket error:', error)
     })
 
     // 获取会话状态
     console.log('🔍 Requesting session status for activity:', params.id)
     socket.emit('get-session-status', params.id)
 
-    // 设置连接超时
-    const timeoutId = setTimeout(() => {
-      if (!isConnected) {
-        console.log('⏰ Connection timeout')
-        setConnectionTimeout(true)
-      }
-    }, 10000) // 10秒超时
-
+    // cleanup
     return () => {
-      clearTimeout(timeoutId)
       socket.emit('leave-activity', params.id)
       socket.off('connect', handleConnect)
       socket.off('activity-updated')
@@ -705,58 +698,7 @@ export default function StudentActivityParticipationPage() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Connection Status */}
-        {!isConnected && !connectionTimeout && (
-          <Card className="mb-6 border-orange-200 bg-orange-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2 text-orange-800">
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                <span>Connecting to activity...</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Connection Success */}
-        {isConnected && (
-          <Card className="mb-6 border-green-200 bg-green-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center space-x-2 text-green-800">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Connected to activity successfully!</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Connection Timeout */}
-        {connectionTimeout && (
-          <Card className="mb-6 border-red-200 bg-red-50">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="flex items-center justify-center space-x-2 text-red-800 mb-4">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span className="font-medium">Connection Failed</span>
-                </div>
-                <p className="text-red-700 mb-4">
-                  Unable to connect to the activity server. Please check your internet connection and try again.
-                </p>
-                <Button 
-                  onClick={() => {
-                    setConnectionTimeout(false)
-                    if (socket) {
-                      socket.connect()
-                    }
-                  }}
-                  variant="outline"
-                  className="border-red-300 text-red-700 hover:bg-red-100"
-                >
-                  Retry Connection
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Connection UI removed: connection status is now silent for students */}
 
         {/* Timer */}
         {timeRemaining !== null && (
